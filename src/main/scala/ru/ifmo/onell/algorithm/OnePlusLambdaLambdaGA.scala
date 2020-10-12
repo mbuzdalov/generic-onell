@@ -318,8 +318,9 @@ object OnePlusLambdaLambdaGA {
     override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
   }
 
-  def powerLawLambda(beta: Double)(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] val weights = collectWeightsUntilThreshold(beta, 1, size, 0, Array.newBuilder[Double])
+  def powerLawLambda(beta: Double)(size: Long): LambdaTuning = powerLawLambda(beta, n => n)(size)
+  def powerLawLambda(beta: Double, limit: Long => Long)(size: Long): LambdaTuning = new LambdaTuning {
+    private[this] val weights = collectWeightsUntilThreshold(beta, 1, limit(size), 0, Array.newBuilder[Double])
 
     override def lambda(rng: Random): Double = {
       val query = weights.last * rng.nextDouble()

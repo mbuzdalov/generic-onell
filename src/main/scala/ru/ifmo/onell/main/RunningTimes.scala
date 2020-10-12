@@ -2,12 +2,13 @@ package ru.ifmo.onell.main
 
 import java.io.PrintWriter
 import java.nio.file.{Files, Paths}
-import java.util.{Arrays => JArrays, Random}
+import java.util.{Random, Arrays => JArrays}
 import java.util.concurrent.ThreadLocalRandom
 
 import scala.jdk.CollectionConverters._
 import scala.util.Using
-import ru.ifmo.onell.{HasIndividualOperations, Main}
+
+import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
 import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT}
@@ -330,17 +331,24 @@ object RunningTimes extends Main.Module {
   }
 
   private def bitsMaxSATSimple(context: Context): Unit = {
-    val algorithms = Seq(
+    def makeHeavy(betaTen: Range, cap: Long => Long, capName: String): Seq[(String, Optimizer)] = betaTen map { b10 =>
+      val b = b10 / 10.0
+      val name = s"(1+(λ,λ)) GA, λ~pow($b), u=$capName"
+      val algo = new OnePlusLambdaLambdaGA(powerLawLambda(b, cap), 'R', "RL", 'C', 'U')
+      (name, algo)
+    }
+
+    val basicAlgorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+(λ,λ)) GA, λ<=n" -> new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ~pow(2.1)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ~pow(2.3)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ~pow(2.7)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ~pow(2.9)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'U'),
+      "(1+(λ,λ)) GA, λ<=2ln(n+1)" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U'),
     )
+
+    val algorithms = basicAlgorithms ++
+      makeHeavy(21 to 29 by 2, n => n / 2, "n/2") ++
+      makeHeavy(21 to 29 by 2, n => math.ceil(math.sqrt(n)).toLong, "sqrt(n)") ++
+      makeHeavy(11 to 29 by 2, n => math.ceil(2 * math.log(n + 1)).toLong, "2ln(n+1)")
 
     val seeder = new Random(314252354)
     context.run { (scheduler, n) =>
