@@ -59,6 +59,7 @@ object RunningTimes extends Main.Module {
 
   override def moduleMain(args: Array[String]): Unit = args(0) match {
     case "bits:om"         => bitsOneMaxSimple(parseContext(args))
+    case "bits:om:cap"     => bitsOneMaxCapping(parseContext(args))
     case "bits:om:sqrt"    => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
     case "bits:om:log"     => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "bits:l2d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 2.0)
@@ -69,6 +70,7 @@ object RunningTimes extends Main.Module {
     case "bits:lni:lambda" => bitsParameterTuningLinearInteger(parseContext(args), n => n)
     case "bits:sat:lambda" => bitsParameterTuningMaxSAT(parseContext(args))
     case "bits:sat"        => bitsMaxSATSimple(parseContext(args))
+    case "bits:sat:cap"    => bitsMaxSATCapping(parseContext(args))
     case "bits:sat:sqrt"   => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
     case "bits:sat:log"    => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "perm:om"         => permOneMaxSimple(parseContext(args))
@@ -134,6 +136,26 @@ object RunningTimes extends Main.Module {
         scheduler addTask {
           val time = alg.optimize(new OneMax(n))
           s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n}}"""
+        }
+      }
+    }
+  }
+
+  private def bitsOneMaxCapping(context: Context): Unit = {
+    val algorithms = for {
+      (beta, capLimit) <- Seq(2.1 -> 1024, 2.3 -> 4096, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
+      cap <- (2 to 30).map(1 << _).filter(_ <= capLimit)
+    } yield {
+      (beta, cap, new OnePlusLambdaLambdaGA(powerLawLambda(beta, _ => cap), 'R', "RL", 'C', 'D'))
+    }
+
+    context.run { (scheduler, n) =>
+      for ((beta, cap, alg) <- algorithms) {
+        scheduler addTask {
+          val t0 = System.nanoTime()
+          val time = alg.optimize(new OneMax(n))
+          val wcTime = (System.nanoTime() - t0) / 1e9
+          s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
         }
       }
     }
@@ -359,6 +381,32 @@ object RunningTimes extends Main.Module {
           val time = alg.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
           val consumed = (System.nanoTime() - t0) * 1e-9
           s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$consumed}"""
+        }
+      }
+    }
+  }
+
+  private def bitsMaxSATCapping(context: Context): Unit = {
+    def makeHeavy(b: Double, cap: Int): Optimizer = {
+      new OnePlusLambdaLambdaGA(powerLawLambda(b, _ => cap), 'R', "RL", 'C', 'U')
+    }
+
+    val algorithms = for {
+      (beta, capLimit) <- Seq(2.1 -> 128, 2.3 -> 1024, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
+      cap <- (2 to 13).map(1 << _).filter(_ <= capLimit)
+    } yield {
+      (beta, cap, makeHeavy(beta, cap))
+    }
+
+    val seeder = new Random(314252354)
+    context.run { (scheduler, n) =>
+      val nClauses = (4 * n * math.log(n)).toInt
+      for ((beta, cap, alg) <- algorithms) {
+        scheduler addTask {
+          val t0 = System.nanoTime()
+          val time = alg.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+          val wcTime = (System.nanoTime() - t0) / 1e9
+          s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
         }
       }
     }
