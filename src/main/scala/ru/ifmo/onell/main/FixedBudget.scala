@@ -154,7 +154,7 @@ object FixedBudget extends Main.Module {
   private def runMultiDimensionalKnapsack(): Unit = {
     val knapsacksAndSolutions = MultiDimensionalKnapsack.ChuBeaselyProblems
     for ((name, optGen) <- optimizers) {
-      print("\\addplot+ coordinates {")
+      print("\\addplot+ [draw=none] coordinates {")
       for ((desc, subset) <- knapsacksAndSolutions.groupBy(getDescriptor)) {
         val runsForEach = 10
         val results = subset.map(p => IndexedSeq.fill(runsForEach)(runKnapsack(optGen, p)).sum / p.linearRelaxation)
