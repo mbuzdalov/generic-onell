@@ -22,11 +22,13 @@ object RunningTimes extends Main.Module {
   override def longDescription: Seq[String] = Seq(
     "The following commands run experiments for problems on bit strings:",
     "  bits:om         <context>: for OneMax",
+    "  bits:om:cap     <context>: same for heavy-tailed algorithms with various capping",
     "  bits:om:sqrt    <context>: same but starting at the distance of sqrt(n) from the end",
     "  bits:om:log     <context>: same but starting at the distance of log(n+1) from the end",
     "  bits:om:lin     <context>: same but starting at the distance of d from the end, d is passed with --d option",
     "                             (several values may be passed comma-separated)",
     "  bits:sat        <context>: same for the MAX-SAT problem with logarithmic density",
+    "  bits:sat:cap    <context>: same for heavy-tailed algorithms with various capping",
     "  bits:sat:sqrt   <context>: same but starting at the distance of sqrt(n) from the end",
     "  bits:sat:log    <context>: same but starting at the distance of log(n+1) from the end",
     "  bits:sat:lin    <context>: same but starting at the distance of d from the end, d is passed with --d option",
@@ -392,7 +394,7 @@ object RunningTimes extends Main.Module {
     }
 
     val algorithms = for {
-      (beta, capLimit) <- Seq(2.1 -> 128, 2.3 -> 1024, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
+      (beta, capLimit) <- Seq(2.1 -> 256, 2.3 -> 32768, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
       cap <- (2 to 13).map(1 << _).filter(_ <= capLimit)
     } yield {
       (beta, cap, makeHeavy(beta, cap))
