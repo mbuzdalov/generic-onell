@@ -11,7 +11,7 @@ import scala.util.Using
 import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
 import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT}
+import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
 import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutor, SequentialExecutor}
 
 object RunningTimes extends Main.Module {
@@ -75,6 +75,7 @@ object RunningTimes extends Main.Module {
     case "bits:sat:cap"    => bitsMaxSATCapping(parseContext(args))
     case "bits:sat:sqrt"   => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
     case "bits:sat:log"    => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
+    case "bits:vcp"        => vertexCoverPSSimple(parseContext(args))
     case "perm:om"         => permOneMaxSimple(parseContext(args))
     case "bits:om:tuning"  => bitsOneMaxAllTuningChoices(parseContext(args))
     case "bits:l2d:tuning" => bitsLinearTunings(parseContext(args), 2.0)
@@ -497,6 +498,29 @@ object RunningTimes extends Main.Module {
             val time = alg.optimize(new OneMaxPerm(n))
             s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n2":${time.toDouble / n / n}}"""
           }
+        }
+      }
+    }
+  }
+
+  private def vertexCoverPSSimple(context: Context): Unit = {
+    val algorithms = Seq(
+      "(1+1) EA" -> OnePlusOneEA.Resampling,
+      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+    )
+
+    context.run { (scheduler, nn) =>
+      val k = Integer.numberOfTrailingZeros(nn)
+      val vcp = VertexCoverProblem.makePSProblem(k)
+      for ((name, alg) <- algorithms) {
+        scheduler addTask {
+          implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
+          val t0 = System.nanoTime()
+          val time = alg.optimize(vcp)
+          val consumed = (System.nanoTime() - t0) * 1e-9
+          s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
         }
       }
     }
