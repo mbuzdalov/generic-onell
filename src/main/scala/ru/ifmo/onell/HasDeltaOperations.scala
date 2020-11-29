@@ -29,7 +29,7 @@ trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
   def initializeDelta(delta: OrderedSet[ChangeIndexType], nChanges: ChangeIndexType, size: Int, rng: Random): Unit
 
   /**
-    * Initializes the given delta using some default distribution law, but taking
+    * Initializes the given delta using a subset of the given source delta with the given size.
     * @param delta the delta to be initialized.
     * @param source the source delta; the initialized delta shall be a subset of the source delta.
     * @param size the delta subset size.
