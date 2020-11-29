@@ -22,7 +22,7 @@ class SparseLongSet extends OrderedSet[Long] {
   override def add(element: Long): Unit = {
     val idx = indexOfElement(element)
     if (hashTable(idx) == 0) {
-      if (nElements == elements.size) {
+      if (nElements == elements.length) {
         elements = Array.copyOf(elements, 2 * elements.length)
         hashTable = new Array(2 * hashTable.length)
         busyIndices = new Array(elements.length)
