@@ -1,6 +1,14 @@
 package ru.ifmo.onell.util
 
 object Helpers {
+  def fillIdentity(array: Array[Int]): Unit = {
+    var i = array.length
+    while (i > 0) {
+      i -= 1
+      array(i) = i
+    }
+  }
+
   def countTrueBits(individual: Array[Boolean]): Int = {
     var i, rv = 0
     val size = individual.length
