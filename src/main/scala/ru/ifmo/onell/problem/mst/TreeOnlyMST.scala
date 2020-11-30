@@ -2,10 +2,9 @@ package ru.ifmo.onell.problem.mst
 
 import java.util.concurrent.{ThreadLocalRandom => Random}
 
-import scala.annotation.tailrec
-
-import ru.ifmo.onell.util.{DisjointSet, OrderedSet}
+import ru.ifmo.onell.util.{DisjointSet, OrderedSet, Permutation}
 import ru.ifmo.onell.{Fitness, HasIndividualOperations}
+
 import TreeOnlyMST._
 
 class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge])
@@ -53,31 +52,35 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge])
 object TreeOnlyMST {
   case class Edge(vertexA: Int, vertexB: Int, weight: Int)
 
-  @tailrec
   def randomGraph(nVertices: Int, nEdges: Int, minWeight: Int, maxWeight: Int, rng: Random): TreeOnlyMST = {
-    val edges = IndexedSeq.fill(nEdges)(Edge(vertexA = rng.nextInt(nVertices),
-                                             vertexB = rng.nextInt(nVertices),
-                                             weight = rng.nextInt(minWeight, maxWeight + 1)))
-    val (_, components) = solveMST(nVertices, edges)
-    if (components != 1)
-      randomGraph(nVertices, nEdges, minWeight, maxWeight, rng)
-    else
-      new TreeOnlyMST(nVertices, edges)
+    val ds = new DisjointSet(nVertices)
+    val builder = IndexedSeq.newBuilder[Edge]
+    var components = nVertices
+    while (components > 1) {
+      val e = Edge(vertexA = rng.nextInt(nVertices),
+                   vertexB = rng.nextInt(nVertices),
+                   weight = rng.nextInt(minWeight, maxWeight + 1))
+      if (ds.unite(e.vertexA, e.vertexB)) {
+        builder += e
+        components -= 1
+      }
+    }
+
+    for (_ <- nVertices - 1 until nEdges)
+      builder += Edge(vertexA = rng.nextInt(nVertices),
+                      vertexB = rng.nextInt(nVertices),
+                      weight = rng.nextInt(minWeight, maxWeight + 1))
+
+    new TreeOnlyMST(nVertices, builder.result())
   }
 
   class Individual(nVertices: Int, nEdges: Int) {
-    private[this] var edgeOrder: Array[Int] = _
+    private[this] var edgeOrder: Permutation = _
     private[this] val ds = new DisjointSet(nVertices)
 
     def initializeRandomly(rng: Random): Unit = {
-      edgeOrder = new Array[Int](nEdges)
-      var i = 1
-      while (i < nEdges) {
-        val prev = rng.nextInt(i + 1)
-        edgeOrder(i) = edgeOrder(prev)
-        edgeOrder(prev) = i
-        i += 1
-      }
+      edgeOrder = Permutation.identity(nEdges)
+      Permutation.shuffle(edgeOrder, rng)
     }
 
     def flipPair(edgePairIndex: Long): Unit = {
@@ -85,9 +88,7 @@ object TreeOnlyMST {
       val nChosenEdges = nVertices - 1
       val indexInChosen = (edgePairIndex % nChosenEdges).toInt
       val indexInNonChosen = (edgePairIndex / nChosenEdges).toInt + nChosenEdges
-      val tmp = edgeOrder(indexInChosen)
-      edgeOrder(indexInChosen) = edgeOrder(indexInNonChosen)
-      edgeOrder(indexInNonChosen) = tmp
+      edgeOrder.swap(indexInChosen, indexInNonChosen)
     }
 
     def fitness(edges: IndexedSeq[Edge], penaltyForComponent: Long): Long = {

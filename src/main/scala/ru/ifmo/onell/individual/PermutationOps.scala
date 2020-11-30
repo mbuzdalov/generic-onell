@@ -10,15 +10,5 @@ import ru.ifmo.onell.util.Permutation
   */
 object PermutationOps extends HasIndividualOperations[Permutation] {
   override def createStorage(problemSize: Int): Permutation = Permutation.identity(problemSize)
-  override def initializeRandomly(individual: Permutation, rng: Random): Unit = {
-    val n = individual.size
-    var i = 1
-    while (i < n) {
-      val j = rng.nextInt(i + 1)
-      if (i != j) {
-        individual.swap(i, j)
-      }
-      i += 1
-    }
-  }
+  override def initializeRandomly(individual: Permutation, rng: Random): Unit = Permutation.shuffle(individual, rng)
 }
