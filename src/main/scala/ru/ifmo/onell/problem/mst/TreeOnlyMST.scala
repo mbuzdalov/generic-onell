@@ -18,7 +18,7 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge])
   assert(nConnectivityComponents == 1,
          "The edge set is not connected") // maybe add penalty * nConnectivityComponents to the optimal answer?
 
-  override def evaluate(individual: Individual): Long = individual.fitness(edges, penalty)
+  override def evaluate(individual: Individual): Long = individual.fitness()
   override def compare(lhs: Long, rhs: Long): Int = rhs.compareTo(lhs)
   override def worstFitness: Long = penalty * nVertices
   override def problemSize: Int = edges.size
@@ -34,7 +34,7 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge])
       ind.flipPair(delta(i))
       i += 1
     }
-    ind.fitness(edges, penalty)
+    ind.fitness()
   }
 
   override def unapplyDelta(ind: Individual, delta: OrderedSet[Long]): Unit = {
@@ -45,7 +45,7 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge])
     }
   }
 
-  override def createStorage(problemSize: Int): Individual = new Individual(nVertices, edges.size)
+  override def createStorage(problemSize: Int): Individual = new Individual(nVertices, edges.size, edges, penalty)
   override def initializeRandomly(individual: Individual, rng: Random): Unit = individual.initializeRandomly(rng)
 }
 
@@ -74,12 +74,13 @@ object TreeOnlyMST {
     new TreeOnlyMST(nVertices, builder.result())
   }
 
-  class Individual(nVertices: Int, nEdges: Int) {
+  class Individual(nVertices: Int, nEdges: Int, edges: IndexedSeq[Edge], penaltyForComponent: Long) {
     private[this] var edgeOrder: Permutation = _
     private[this] val ds = new DisjointSet(nVertices)
 
     def initializeRandomly(rng: Random): Unit = {
-      edgeOrder = Permutation.identity(nEdges)
+      if (edgeOrder == null)
+        edgeOrder = Permutation.identity(nEdges)
       Permutation.shuffle(edgeOrder, rng)
     }
 
@@ -91,7 +92,7 @@ object TreeOnlyMST {
       edgeOrder.swap(indexInChosen, indexInNonChosen)
     }
 
-    def fitness(edges: IndexedSeq[Edge], penaltyForComponent: Long): Long = {
+    def fitness(): Long = {
       ds.clear()
 
       var i = 0
@@ -110,7 +111,8 @@ object TreeOnlyMST {
     }
 
     private def checkWhetherInitialized(): Unit =
-      if (edgeOrder == null) throw new IllegalStateException("Individual shall be initialized!")
+      if (edgeOrder == null)
+        throw new IllegalStateException("Individual shall be initialized!")
   }
 
   def solveMST(nVertices: Int, edges: IndexedSeq[Edge]): (Long, Int) = {
