@@ -199,7 +199,7 @@ object OnePlusLambdaLambdaGA {
 
   object MutationStrength {
     final val Standard: MutationStrength = (n, l) => BinomialDistribution(n, l / n)
-    final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution(n, l / n).filter(_ > 0)
+    final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution(n, l / n).resampleIfBelow(1)
     final val Shift: MutationStrength = (n, l) => BinomialDistribution(n, l / n).max(1)
 
     implicit def s2standard(dummy: 'S'): MutationStrength = Standard
@@ -228,12 +228,12 @@ object OnePlusLambdaLambdaGA {
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps
     }
     final val ResamplingL: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bL(l, d, q).filter(_ > 0)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bL(l, d, q).resampleIfBelow(1)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps || d == 1
     }
     final val ResamplingD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bD(d, q).filter(_ > 0)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bD(d, q).resampleIfBelow(1)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps || d == 1
     }

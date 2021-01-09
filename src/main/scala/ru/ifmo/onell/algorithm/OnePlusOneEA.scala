@@ -38,7 +38,7 @@ object OnePlusOneEA {
     *
     * From the literature, this flavour is known as "resampling mutation".
     */
-  final val Resampling = new OnePlusOneEA(n => BinomialDistribution(n, 1.0 / n).filter(_ > 0))
+  final val Resampling = new OnePlusOneEA(n => BinomialDistribution(n, 1.0 / n).resampleIfBelow(1))
 }
 
 /**
