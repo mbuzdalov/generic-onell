@@ -50,7 +50,7 @@ object RunningTimes extends Main.Module {
     "  bits:l5i:lambda <context>: same for linear functions with random integer weights from [1;5]",
     "  bits:lni:lambda <context>: same for linear functions with random integer weights from [1;n]",
     "  bits:sat:lambda <context>: same for the MAX-SAT problem with logarithmic density",
-    "  bits:mst-tree   <context>: same for the minimum spanning tree problem with individuals encoding trees",
+    "  bits:mst-tree   <context>: same for the minimum spanning tree problem with individuals encoding E=V-1 graphs",
     "  bits:vcp        <context>: same for the vertex cover problem (here, --from and --to control actual vertex numbers)",
     "The following commands run experiments for problems on permutations:",
     "  perm:om         <context>: for the permutation flavour of OneMax",
