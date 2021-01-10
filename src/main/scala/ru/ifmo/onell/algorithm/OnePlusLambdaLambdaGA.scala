@@ -3,13 +3,12 @@ package ru.ifmo.onell.algorithm
 import java.util.concurrent.{ThreadLocalRandom => Random}
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.{specialized => sp}
 
 import ru.ifmo.onell._
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
-import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution}
+import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
 import ru.ifmo.onell.util.OrderedSet
 import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
 
@@ -304,14 +303,8 @@ object OnePlusLambdaLambdaGA {
 
   def powerLawLambda(beta: Double)(size: Long): LambdaTuning = powerLawLambda(beta, n => n)(size)
   def powerLawLambda(beta: Double, limit: Long => Long)(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] val weights = collectWeightsUntilThreshold(beta, 1, limit(size), 0, Array.newBuilder[Double])
-
-    override def lambda(rng: Random): Double = {
-      val query = weights.last * rng.nextDouble()
-      val index0 = java.util.Arrays.binarySearch(weights, query)
-      val index = if (index0 >= 0) index0 else -index0 - 1
-      index + 1 // since index=0 corresponds to lambda=1
-    }
+    private[this] val dist = PowerLawDistribution(limit(size), beta)
+    override def lambda(rng: Random): Double = dist.sample(rng)
     override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
     override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
     override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
@@ -363,16 +356,6 @@ object OnePlusLambdaLambdaGA {
   final val defaultTuning = ConstantTuning(1.0, 1.0, 1.0)
   final val OneFifthOnSuccess = 1 / 1.5
   final val OneFifthOnFailure = math.pow(1.5, 0.25)
-
-  @tailrec
-  private[this] def collectWeightsUntilThreshold(beta: Double, index: Long, size: Long, cumulative: Double,
-                                                 weights: mutable.ArrayBuilder[Double]): Array[Double] = {
-    val addend = cumulative + math.pow(index.toDouble, -beta)
-    if (index > size || addend == 0) weights.result() else {
-      weights += addend
-      collectWeightsUntilThreshold(beta, index + 1, size, addend, weights)
-    }
-  }
 
   private final class Aux[@sp(fsp) F] {
     var fitness: F = _
