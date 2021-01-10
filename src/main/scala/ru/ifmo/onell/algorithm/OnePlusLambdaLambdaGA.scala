@@ -301,7 +301,7 @@ object OnePlusLambdaLambdaGA {
   }
 
   def fixedLogLambda(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] val theLambda = 2 * math.log(size + 1)
+    private[this] val theLambda = 2 * math.log(size + 1.0)
     override def lambda(rng: Random): Double = theLambda
     override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
     override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
@@ -309,9 +309,9 @@ object OnePlusLambdaLambdaGA {
   }
 
   def fixedLogTowerLambda(size: Long): LambdaTuning = new LambdaTuning {
-    private val logN = math.log(size + 1)
-    private val logLogN = math.log(logN + 1)
-    private val theLambda = math.sqrt(logN * logLogN / math.log(logLogN + 1)) * 2
+    private val logN = math.log(size + 1.0)
+    private val logLogN = math.log(logN + 1.0)
+    private val theLambda = math.sqrt(logN * logLogN / math.log(logLogN + 1.0)) * 2
     override def lambda(rng: Random): Double = theLambda
     override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
     override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
@@ -343,8 +343,8 @@ object OnePlusLambdaLambdaGA {
     override def notifyChildIsWorse(budgetSpent: Long): Unit = value = math.min(maxValue, math.max(1, value * onFailure))
   }
 
-  def defaultOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => n)(size)
-  def logCappedOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1))(size)
+  def defaultOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _.toDouble)(size)
+  def logCappedOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1.0))(size)
 
   def modifiedOneFifthLambda(onSuccess: Double, onFailure: Double, threshold: Long => Double)(size: Long): LambdaTuning = new LambdaTuning {
     private[this] var value, baseValue = 1.0
@@ -365,12 +365,12 @@ object OnePlusLambdaLambdaGA {
         delta += 1
         continuousFailedIterations = 0
       }
-      value = math.min(maxValue, math.max(1, baseValue * math.pow(onFailure, continuousFailedIterations)))
+      value = math.min(maxValue, math.max(1, baseValue * math.pow(onFailure, continuousFailedIterations.toDouble)))
     }
   }
 
-  def modifiedOneFifthLambda(size: Long): LambdaTuning = modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => n)(size)
-  def logCappedModifiedOneFifthLambda(size: Long): LambdaTuning = modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1))(size)
+  def modifiedOneFifthLambda(size: Long): LambdaTuning = modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _.toDouble)(size)
+  def logCappedModifiedOneFifthLambda(size: Long): LambdaTuning = modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1.0))(size)
 
   case class ConstantTuning(mutationProbabilityQuotient: Double,
                             crossoverProbabilityQuotient: Double,
@@ -383,7 +383,7 @@ object OnePlusLambdaLambdaGA {
   @tailrec
   private[this] def collectWeightsUntilThreshold(beta: Double, index: Long, size: Long, cumulative: Double,
                                                  weights: mutable.ArrayBuilder[Double]): Array[Double] = {
-    val addend = cumulative + math.pow(index, -beta)
+    val addend = cumulative + math.pow(index.toDouble, -beta)
     if (index > size || addend == 0) weights.result() else {
       weights += addend
       collectWeightsUntilThreshold(beta, index + 1, size, addend, weights)

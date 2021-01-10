@@ -376,8 +376,8 @@ object RunningTimes extends Main.Module {
 
     val algorithms = basicAlgorithms ++
       makeHeavy(21 to 29 by 2, n => n / 2, "n/2") ++
-      makeHeavy(21 to 29 by 2, n => math.ceil(math.sqrt(n)).toLong, "sqrt(n)") ++
-      makeHeavy(11 to 29 by 2, n => math.ceil(2 * math.log(n + 1)).toLong, "2ln(n+1)")
+      makeHeavy(21 to 29 by 2, n => math.ceil(math.sqrt(n.toDouble)).toLong, "sqrt(n)") ++
+      makeHeavy(11 to 29 by 2, n => math.ceil(2 * math.log(n + 1.0)).toLong, "2ln(n+1)")
 
     val seeder = new Random(314252354)
     context.run { (scheduler, n) =>
@@ -535,7 +535,7 @@ object RunningTimes extends Main.Module {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5, i => math.sqrt(i).toLong), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5, i => math.sqrt(i.toDouble).toLong), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
       )
 

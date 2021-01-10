@@ -139,12 +139,12 @@ object IRaceClient extends Main.Module {
       case "linear" => ParameterAndJson(oneFifthLambda(
         onSuccess = args.getOption("--tuning-success").toDouble,
         onFailure = args.getOption("--tuning-failure").toDouble,
-        threshold = size => size
+        threshold = _.toDouble
       ), """"lambda":"λ<=n"""")
       case "log" => ParameterAndJson(oneFifthLambda(
         onSuccess = args.getOption("--tuning-success").toDouble,
         onFailure = args.getOption("--tuning-failure").toDouble,
-        threshold = size => 2 * math.log(size + 1)
+        threshold = size => 2 * math.log(size + 1.0)
       ), """"lambda":"λ<=log n"""")
       case "fixed" =>
         val value = args.getOption("--lambda").toInt
