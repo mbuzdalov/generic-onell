@@ -20,8 +20,7 @@ object PowerLawDistribution {
       override def sample(rng: Random): Int = {
         val query = weights.last * rng.nextDouble()
         val index0 = java.util.Arrays.binarySearch(weights, query)
-        val index = if (index0 >= 0) index0 else -index0 - 1
-        index + 1 // since index=0 corresponds to lambda=1
+        if (index0 >= 0) index0 + 1 else -index0
       }
       override def minValue: Int = 1
       override def maxValue: Int = n
