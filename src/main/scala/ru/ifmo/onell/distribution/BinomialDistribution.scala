@@ -7,31 +7,30 @@ import ru.ifmo.onell.util.BinomialScanner
 object BinomialDistribution {
   def apply(n: Long, p: Double): IntegerDistribution = {
     assert(n * p < Int.MaxValue / 2, s"The product of `n` and `p` is too large (${n * p}), sampling would be infeasible")
-
-    new IntegerDistribution {
-      private[this] val scanner = BinomialScanner(p)
-      override def sample(rng: Random): Int = withScanner(n, scanner, rng)
-      override def minValue: Int = 0
-      override val maxValue: Int = if (n > Int.MaxValue) Int.MaxValue else n.toInt
-    }
+    useBinomialScanner(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p)
   }
 
-  def apply(n: Int, p: Double): IntegerDistribution = {
-    new IntegerDistribution {
-      private[this] val scanner = BinomialScanner(p)
-      override def sample(rng: Random): Int = withScanner(n, scanner, rng)
-      override def minValue: Int = 0
-      override val maxValue: Int = n
-    }
-  }
+  def apply(n: Int, p: Double): IntegerDistribution = useBinomialScanner(n, p)
 
-  private def withScanner(n: Long, scanner: BinomialScanner, rng: Random): Int = {
-    var idx = scanner.offset(rng) - 1
-    var result = 0
-    while (idx < n) {
-      result += 1
-      idx += scanner.offset(rng)
+  def useBinomialScanner(n: Int, p: Double): IntegerDistribution = {
+    if (p == 0)
+      0
+    else if (p == 1)
+      n
+    else new IntegerDistribution {
+      private[this] val scanner = BinomialScanner(p)
+      override def sample(rng: Random): Int = {
+        var idx = scanner.offset(rng) - 1
+        var result = 0
+        while (idx < n) {
+          result += 1
+          idx += scanner.offset(rng)
+        }
+        result
+      }
+
+      override def minValue: Int = 0
+      override def maxValue: Int = n
     }
-    result
   }
 }
