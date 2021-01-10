@@ -256,33 +256,17 @@ object OnePlusLambdaLambdaGA {
     implicit def hd2shiftD(dummy: "HD"): CrossoverStrength = ShiftD
   }
 
-  sealed trait GoodMutantStrategy {
-    def incrementForTriedQueries: Int
-    def incrementForTestedQueries: Int
-  }
-
+  sealed abstract class GoodMutantStrategy private (val incrementForTriedQueries: Int, val incrementForTestedQueries: Int)
   object GoodMutantStrategy {
-    case object Ignore extends GoodMutantStrategy {
-      override def incrementForTestedQueries: Int = 1
-      override def incrementForTriedQueries: Int = 1
-    }
-    case object SkipCrossover extends GoodMutantStrategy {
-      override def incrementForTestedQueries: Int = 1
-      override def incrementForTriedQueries: Int = 1
-    }
-    case object DoNotCountIdentical extends GoodMutantStrategy {
-      override def incrementForTestedQueries: Int = 0
-      override def incrementForTriedQueries: Int = 1
-    }
-    case object DoNotSampleIdentical extends GoodMutantStrategy {
-      override def incrementForTestedQueries: Int = 0
-      override def incrementForTriedQueries: Int = 0
-    }
+    case object Ignore extends GoodMutantStrategy(1, 1)
+    case object SkipCrossover extends GoodMutantStrategy(1, 1)
+    case object DoNotCountIdentical extends GoodMutantStrategy(1, 0)
+    case object DoNotSampleIdentical extends GoodMutantStrategy(0, 0)
 
-    implicit def i2ignore(dummy: 'I'): GoodMutantStrategy = Ignore
-    implicit def s2skip(dummy: 'S'): GoodMutantStrategy = SkipCrossover
-    implicit def c2doNotCount(dummy: 'C'): GoodMutantStrategy = DoNotCountIdentical
-    implicit def m2doNotSample(dummy: 'M'): GoodMutantStrategy = DoNotSampleIdentical
+    implicit def i2ignore(dummy: 'I'): Ignore.type = Ignore
+    implicit def s2skip(dummy: 'S'): SkipCrossover.type = SkipCrossover
+    implicit def c2doNotCount(dummy: 'C'): DoNotCountIdentical.type = DoNotCountIdentical
+    implicit def m2doNotSample(dummy: 'M'): DoNotSampleIdentical.type = DoNotSampleIdentical
   }
 
   trait LambdaTuning {
