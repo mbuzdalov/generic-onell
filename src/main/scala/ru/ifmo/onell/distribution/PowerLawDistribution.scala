@@ -5,11 +5,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object PowerLawDistribution {
-  def apply(n: Long, beta: Double): IntegerDistribution = {
-    assert(n < Int.MaxValue, "Power law distribution is VERY unlikely to work with a so high limit")
-    PowerLawDistribution(n.toInt, beta)
-  }
-
+  def apply(n: Long, beta: Double): IntegerDistribution = PowerLawDistribution(math.min(n, Int.MaxValue).toInt, beta)
   def apply(n: Int, beta: Double): IntegerDistribution =
     if (n < 1)
       throw new IllegalArgumentException("Power law distribution does not exist for a maximum value less than 1")
@@ -30,7 +26,7 @@ object PowerLawDistribution {
   private[this] def collectWeightsUntilThreshold(beta: Double, index: Int, size: Int, cumulative: Double,
                                                  weights: mutable.ArrayBuilder[Double]): Array[Double] = {
     val addend = cumulative + math.pow(index.toDouble, -beta)
-    if (index > size || addend == 0) weights.result() else {
+    if (index > size || addend == cumulative) weights.result() else {
       weights += addend
       collectWeightsUntilThreshold(beta, index + 1, size, addend, weights)
     }

@@ -26,7 +26,7 @@ class RLSTests extends AnyFlatSpec with Matchers {
     val runs = IndexedSeq.fill(20)(RLS.optimize(om))
     val expected = size / 2.0 * size * (1 to size / 2).map(1.0 / _).sum
     val found = runs.sum.toDouble / runs.size
-    found should (be <= expected * 1.2)
+    found should (be <= expected * 1.21)
   }
 
   it should "perform as expected on OneMaxPerm even if called through interface" in {
@@ -36,7 +36,7 @@ class RLSTests extends AnyFlatSpec with Matchers {
     val runs = IndexedSeq.fill(20)(rls.optimize(om))
     val expected = size / 2.0 * size * (1 to size / 2).map(1.0 / _).sum
     val found = runs.sum.toDouble / runs.size
-    found should (be <= expected * 1.2)
+    found should (be <= expected * 1.21)
   }
 
   it should "perform as expected on LinearRandomDoubleWeights" in {
