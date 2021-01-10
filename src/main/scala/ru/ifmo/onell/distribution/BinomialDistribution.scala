@@ -12,7 +12,7 @@ object BinomialDistribution {
 
   def apply(n: Int, p: Double): IntegerDistribution = useBinomialScanner(n, p)
 
-  def useBinomialScanner(n: Int, p: Double): IntegerDistribution = {
+  def useBinomialScanner(n: Int, p: Double): IntegerDistribution =
     if (p == 0)
       0
     else if (p == 1)
@@ -32,5 +32,22 @@ object BinomialDistribution {
       override def minValue: Int = 0
       override def maxValue: Int = n
     }
-  }
+
+  def useDefinition(n: Int, p: Double): IntegerDistribution =
+    if (p == 0)
+      0
+    else if (p == 1)
+      n
+    else new IntegerDistribution {
+      override def sample(rng: Random): Int = {
+        var i, rv = 0
+        while (i < n) {
+          if (rng.nextDouble() < p) rv += 1
+          i += 1
+        }
+        rv
+      }
+      override def minValue: Int = 0
+      override def maxValue: Int = n
+    }
 }

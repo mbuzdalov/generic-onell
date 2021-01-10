@@ -6,10 +6,12 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class BinomialDistributionTests extends AnyFlatSpec with Matchers {
-  private def test(n: Int, p: Double, runs: Int): Unit = {
+  private type DistGen = (Int, Double) => IntegerDistribution
+
+  private def test(n: Int, p: Double, runs: Int, distribution: DistGen): Unit = {
     var nZeros, nOnes = 0
-    val dist = BinomialDistribution(n, p)
-    val rng = new Random(2563454774352232L)
+    val dist = distribution(n, p)
+    val rng = new Random(78438753652362575L)
     var count = 0
     while (count < runs) {
       val sample = dist.sample(rng)
@@ -34,10 +36,16 @@ class BinomialDistributionTests extends AnyFlatSpec with Matchers {
     nOnes should (be >= oneLo and be <= oneHi)
   }
 
-  "The distribution" should "produce expected results for n=100, p=0.01" in test(100, 0.01, 5000)
-  it should "produce expected results for n=100, p=0.03" in test(100, 0.03, 5000)
-  it should "produce expected results for n=100, p=0.1" in test(100, 0.1, 10000)
-  it should "produce expected results for n=1000, p=0.001" in test(1000, 0.001, 30000)
-  it should "produce expected results for n=1000, p=0.02" in test(1000, 0.02, 30000)
-  it should "produce expected results for n=1000, p=0.1" in test(1000, 0.1, 30000)
+  for ((d, name) <- Seq[(DistGen, String)](
+    ((n, p) => BinomialDistribution(n, p), "The default implementation"),
+    (BinomialDistribution.useBinomialScanner, "Implementation using binomial scanner"),
+    (BinomialDistribution.useDefinition, "Implementation by definition"),
+  )) {
+    name should "produce expected results for n=100, p=0.01" in test(100, 0.01, 5000, d)
+    it should "produce expected results for n=100, p=0.03" in test(100, 0.03, 5000, d)
+    it should "produce expected results for n=100, p=0.1" in test(100, 0.1, 10000, d)
+    it should "produce expected results for n=1000, p=0.001" in test(1000, 0.001, 30000, d)
+    it should "produce expected results for n=1000, p=0.02" in test(1000, 0.02, 30000, d)
+    it should "produce expected results for n=1000, p=0.1" in test(1000, 0.1, 30000, d)
+  }
 }
