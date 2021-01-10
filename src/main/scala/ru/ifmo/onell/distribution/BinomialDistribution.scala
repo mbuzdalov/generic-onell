@@ -5,11 +5,22 @@ import java.util.Random
 import ru.ifmo.onell.util.BinomialScanner
 
 object BinomialDistribution {
-  // TODO: this signature is vulnerable. Calls with extremely large `n` and `p` near 1 result in a broken distribution.
-  def apply(n: Long, p: Double): IntegerDistribution = new IntegerDistribution {
-    override def sample(rng: Random): Int = withScanner(n, p, rng)
-    override def minValue: Int = 0
-    override val maxValue: Int = if (n > Int.MaxValue) Int.MaxValue else n.toInt
+  def apply(n: Long, p: Double): IntegerDistribution = {
+    assert(n * p < Int.MaxValue / 2, s"The product of `n` and `p` is too large (${n * p}), sampling would be infeasible")
+
+    new IntegerDistribution {
+      override def sample(rng: Random): Int = withScanner(n, p, rng)
+      override def minValue: Int = 0
+      override val maxValue: Int = if (n > Int.MaxValue) Int.MaxValue else n.toInt
+    }
+  }
+
+  def apply(n: Int, p: Double): IntegerDistribution = {
+    new IntegerDistribution {
+      override def sample(rng: Random): Int = withScanner(n, p, rng)
+      override def minValue: Int = 0
+      override val maxValue: Int = n
+    }
   }
 
   private def withScanner(n: Long, p: Double, rng: Random): Int = {
