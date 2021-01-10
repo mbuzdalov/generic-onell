@@ -1,7 +1,5 @@
 package ru.ifmo.onell.util
 
-import java.util.Random
-
 class SparseLongSet extends OrderedSet[Long] {
   private[this] var elements: Array[Long] = new Array(10)
   private[this] var nElements = 0
@@ -33,19 +31,6 @@ class SparseLongSet extends OrderedSet[Long] {
       }
       elements(nElements) = element
       nElements += 1
-    }
-  }
-
-  override def shuffleOrder(rng: Random): Unit = {
-    var i = 0
-    while (i < nElements) {
-      val j = rng.nextInt(i + 1)
-      if (j != i) {
-        val tmp = elements(i)
-        elements(i) = elements(j)
-        elements(j) = tmp
-      }
-      i += 1
     }
   }
 

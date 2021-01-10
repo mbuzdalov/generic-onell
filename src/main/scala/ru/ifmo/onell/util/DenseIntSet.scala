@@ -1,7 +1,5 @@
 package ru.ifmo.onell.util
 
-import java.util.Random
-
 final class DenseIntSet(maxElement: Int) extends OrderedSet[Int] {
   private[this] val contained: Array[Boolean] = Array.ofDim(maxElement)
   private[this] val elements: Array[Int] = Array.ofDim(maxElement)
@@ -28,19 +26,6 @@ final class DenseIntSet(maxElement: Int) extends OrderedSet[Int] {
       contained(ei) = true
       elements(mySize) = ei
       mySize += 1
-    }
-  }
-
-  override def shuffleOrder(rng: Random): Unit = {
-    var i = 1
-    while (i < size) {
-      val j = rng.nextInt(i + 1)
-      if (i != j) {
-        val tmp = elements(i)
-        elements(i) = elements(j)
-        elements(j) = tmp
-      }
-      i += 1
     }
   }
 }
