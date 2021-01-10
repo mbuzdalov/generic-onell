@@ -19,7 +19,7 @@ object PowerLawDistribution {
         if (index0 >= 0) index0 + 1 else -index0
       }
       override def minValue: Int = 1
-      override def maxValue: Int = n
+      override def maxValue: Int = weights.length
     }
 
   @tailrec
