@@ -12,6 +12,7 @@ import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
 import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
 import ru.ifmo.onell.problem.mst.TreeOnlyMST
+import ru.ifmo.onell.problem.mst.util.NaiveDynamicGraph
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
 import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutor, SequentialExecutor}
 
@@ -541,7 +542,7 @@ object RunningTimes extends Main.Module {
 
     context.run { (scheduler, n) =>
       val e = 2 * n
-      val mst = TreeOnlyMST.randomGraph(n, e, 1, 2, ThreadLocalRandom.current())
+      val mst = TreeOnlyMST.randomGraph(n, e, 1, 2, ThreadLocalRandom.current(), NaiveDynamicGraph)
       for ((name, alg) <- algorithms) {
         scheduler addTask {
           implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
