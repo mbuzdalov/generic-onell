@@ -62,6 +62,23 @@ trait IntegerDistribution { self =>
   }
 
   /**
+    * Returns a distribution that is `this` distribution plus a given constant `value`.
+    * @param value the constant to add.
+    * @return the new distribution that is always by `value` greater than `this`.
+    */
+  def plus(value: Int): IntegerDistribution = new Plus(this, value)
+
+  /**
+    * Returns a distribution that negates each value returned by `this`.
+    * @return the negated distribution.
+    */
+  def negate(): IntegerDistribution = new IntegerDistribution {
+    override def sample(rng: Random): Int = -self.sample(rng)
+    override def minValue: Int = -self.maxValue
+    override def maxValue: Int = -self.minValue
+  }
+
+  /**
     * Returns a distribution that continues querying `this` until the returned value is `limit` or above.
     * In a special case that only one value, out of these that can be returned by `this`, satisfies the predicate,
     * a constant distribution is returned that never queries `this`. In another special case that none of the values
@@ -103,5 +120,15 @@ object IntegerDistribution {
     override def sample(rng: Random): Int = value
     override def minValue: Int = value
     override def maxValue: Int = value
+    override def plus(value: Int): IntegerDistribution = this.value + value
+    override def negate(): IntegerDistribution = -this.value
+  }
+
+  private final class Plus(base: IntegerDistribution, value: Int) extends IntegerDistribution {
+    override def sample(rng: Random): Int = value + base.sample(rng)
+    override def minValue: Int = value + base.minValue
+    override def maxValue: Int = value + base.maxValue
+    override def plus(value: Int): IntegerDistribution = new Plus(base, this.value + value)
+    override def negate(): IntegerDistribution = new Plus(base.negate(), -value)
   }
 }
