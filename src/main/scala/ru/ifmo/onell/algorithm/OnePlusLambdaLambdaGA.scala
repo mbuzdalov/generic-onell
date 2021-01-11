@@ -156,7 +156,8 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
 
       val nextFitness = if (fitnessComparison <= 0) {
         val theFitness = fitness.applyDelta(individual, crossoverBest, f)
-        assert(fitness.compare(bestChildFitness, theFitness) == 0, "Fitness incremental evaluation seems broken")
+        assert(fitness.compare(bestChildFitness, theFitness) == 0,
+               s"Fitness incremental evaluation seems broken: $bestChildFitness != $theFitness")
         theFitness
       } else f
       iterationLogger.logIteration(newEvaluations, bestChildFitness)
