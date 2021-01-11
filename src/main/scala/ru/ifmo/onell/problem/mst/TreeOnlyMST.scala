@@ -2,6 +2,8 @@ package ru.ifmo.onell.problem.mst
 
 import java.util.concurrent.{ThreadLocalRandom => Random}
 
+import scala.annotation.tailrec
+
 import ru.ifmo.onell.problem.mst.TreeOnlyMST._
 import ru.ifmo.onell.problem.mst.util.DynamicGraph
 import ru.ifmo.onell.util.{DisjointSet, OrderedSet, Permutation}
@@ -55,15 +57,21 @@ object TreeOnlyMST {
   case class Edge(vertexA: Int, vertexB: Int, weight: Int)
   private case class InternalEdge(id: Int, vertexA: Int, vertexB: Int, weight: Int) extends DynamicGraph.Edge
 
+  @tailrec
+  private def newRandomEdge(nVertices: Int, minWeight: Int, maxWeight: Int, rng: Random): Edge = {
+    val va, vb = rng.nextInt(nVertices)
+    if (va < vb)
+      Edge(vertexA = va, vertexB = vb, weight = rng.nextInt(minWeight, maxWeight + 1))
+    else newRandomEdge(nVertices, minWeight, maxWeight, rng)
+  }
+
   def randomGraph(nVertices: Int, nEdges: Int, minWeight: Int, maxWeight: Int,
                   rng: Random, factory: DynamicGraph.Factory): TreeOnlyMST = {
     val ds = new DisjointSet(nVertices)
     val builder = IndexedSeq.newBuilder[Edge]
     var components = nVertices
     while (components > 1) {
-      val e = Edge(vertexA = rng.nextInt(nVertices),
-                   vertexB = rng.nextInt(nVertices),
-                   weight = rng.nextInt(minWeight, maxWeight + 1))
+      val e = newRandomEdge(nVertices, minWeight, maxWeight, rng)
       if (ds.unite(e.vertexA, e.vertexB)) {
         builder += e
         components -= 1
@@ -71,9 +79,7 @@ object TreeOnlyMST {
     }
 
     for (_ <- nVertices - 1 until nEdges)
-      builder += Edge(vertexA = rng.nextInt(nVertices),
-                      vertexB = rng.nextInt(nVertices),
-                      weight = rng.nextInt(minWeight, maxWeight + 1))
+      builder += newRandomEdge(nVertices, minWeight, maxWeight, rng)
 
     new TreeOnlyMST(nVertices, builder.result(), factory)
   }
