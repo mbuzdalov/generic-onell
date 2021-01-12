@@ -3,6 +3,7 @@ package ru.ifmo.onell.problem.mst
 import java.util.concurrent.{ThreadLocalRandom => Random}
 
 import scala.annotation.tailrec
+import scala.collection.mutable.{HashSet => MuHashSet}
 
 import ru.ifmo.onell.problem.mst.TreeOnlyMST._
 import ru.ifmo.onell.problem.mst.util.DynamicGraph
@@ -58,20 +59,23 @@ object TreeOnlyMST {
   private case class InternalEdge(id: Int, vertexA: Int, vertexB: Int, weight: Int) extends DynamicGraph.Edge
 
   @tailrec
-  private def newRandomEdge(nVertices: Int, minWeight: Int, maxWeight: Int, rng: Random): Edge = {
+  private def newRandomEdge(nVertices: Int, minWeight: Int, maxWeight: Int, rng: Random, existing: MuHashSet[(Int, Int)]): Edge = {
     val va, vb = rng.nextInt(nVertices)
-    if (va < vb)
+    if (va < vb && !existing.contains(va -> vb)) {
+      existing.add(va -> vb)
       Edge(vertexA = va, vertexB = vb, weight = rng.nextInt(minWeight, maxWeight + 1))
-    else newRandomEdge(nVertices, minWeight, maxWeight, rng)
+    } else newRandomEdge(nVertices, minWeight, maxWeight, rng, existing)
   }
 
   def randomGraph(nVertices: Int, nEdges: Int, minWeight: Int, maxWeight: Int,
                   rng: Random, factory: DynamicGraph.Factory): TreeOnlyMST = {
+    require(nEdges <= nVertices * (nVertices - 1) / 2, "Too many edges: they need to be different")
     val ds = new DisjointSet(nVertices)
     val builder = IndexedSeq.newBuilder[Edge]
     var components = nVertices
+    val existing = new MuHashSet[(Int, Int)]
     while (components > 1) {
-      val e = newRandomEdge(nVertices, minWeight, maxWeight, rng)
+      val e = newRandomEdge(nVertices, minWeight, maxWeight, rng, existing)
       if (ds.unite(e.vertexA, e.vertexB)) {
         builder += e
         components -= 1
@@ -79,7 +83,7 @@ object TreeOnlyMST {
     }
 
     for (_ <- nVertices - 1 until nEdges)
-      builder += newRandomEdge(nVertices, minWeight, maxWeight, rng)
+      builder += newRandomEdge(nVertices, minWeight, maxWeight, rng, existing)
 
     new TreeOnlyMST(nVertices, builder.result(), factory)
   }
