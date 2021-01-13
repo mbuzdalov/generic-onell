@@ -46,5 +46,24 @@ object BinomialDistribution {
     }
     override def minValue: Int = 0
     override def maxValue: Int = n
+    override def resampleIfBelow(limit: Int): IntegerDistribution =
+      if (limit == 0) this
+      else if (limit == 1) new WithScannerModuloOnce(n, p)
+      else super.resampleIfBelow(limit)
+  }
+
+  private[distribution] class WithScannerModuloOnce(n: Int, p: Double) extends IntegerDistribution {
+    private[this] val scanner = BinomialScanner(p)
+    override def sample(rng: Random): Int = {
+      var idx = (scanner.offset(rng) - 1) % n
+      var result = 0
+      while (idx < n) {
+        result += 1
+        idx += scanner.offset(rng)
+      }
+      result
+    }
+    override def minValue: Int = 1
+    override def maxValue: Int = n
   }
 }
