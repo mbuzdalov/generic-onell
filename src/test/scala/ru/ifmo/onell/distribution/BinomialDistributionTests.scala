@@ -37,10 +37,10 @@ class BinomialDistributionTests extends AnyFlatSpec with Matchers {
   }
 
   for ((d, name) <- Seq[(DistGen, String)](
-    ((n, p) => BinomialDistribution(n, p), "The default implementation"),
-    ((n, p) => new BinomialDistribution.WithScanner(n, p), "Implementation using binomial scanner"),
-    ((n, p) => new BinomialDistribution.ByDefinition(n, p), "Implementation by definition"),
-  )) {
+    ((n, p) => BinomialDistribution.standard(n, p), "The default implementation"),
+    ((n, p) => new BinomialDistribution.StandardWithScanner(n, p), "Implementation using binomial scanner"),
+    ((n, p) => new BinomialDistribution.StandardByDefinition(n, p), "Implementation by definition"),
+    )) {
     name should "produce expected results for n=100, p=0.01" in test(100, 0.01, 5000, d)
     it should "produce expected results for n=100, p=0.03" in test(100, 0.03, 5000, d)
     it should "produce expected results for n=100, p=0.1" in test(100, 0.1, 10000, d)

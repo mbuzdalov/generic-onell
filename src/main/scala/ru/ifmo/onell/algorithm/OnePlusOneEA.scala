@@ -22,7 +22,7 @@ object OnePlusOneEA {
   /**
     * This is the standard (1+1) EA, which flips every bit independently with probability 1/n.
     */
-  final val Standard = new OnePlusOneEA(n => BinomialDistribution(n, 1.0 / n))
+  final val Standard = new OnePlusOneEA(n => BinomialDistribution.standard(n, 1.0 / n))
 
   /**
     * This is the (1+1) EA which flips every bit independently with probability 1/n,
@@ -30,7 +30,7 @@ object OnePlusOneEA {
     *
     * From the literature, this flavour is known as "shift mutation".
     */
-  final val Shift = new OnePlusOneEA(n => BinomialDistribution(n, 1.0 / n).max(1))
+  final val Shift = new OnePlusOneEA(n => BinomialDistribution.shift(n, 1.0 / n))
 
   /**
     * This is the (1+1) EA which flips every bit independently with probability 1/n,
@@ -38,7 +38,7 @@ object OnePlusOneEA {
     *
     * From the literature, this flavour is known as "resampling mutation".
     */
-  final val Resampling = new OnePlusOneEA(n => BinomialDistribution(n, 1.0 / n).resampleIfBelow(1))
+  final val Resampling = new OnePlusOneEA(n => BinomialDistribution.resampling(n, 1.0 / n))
 }
 
 /**

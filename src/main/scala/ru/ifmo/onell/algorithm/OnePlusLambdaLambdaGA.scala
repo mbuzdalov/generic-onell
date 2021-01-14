@@ -197,9 +197,9 @@ object OnePlusLambdaLambdaGA {
   }
 
   object MutationStrength {
-    final val Standard: MutationStrength = (n, l) => BinomialDistribution(n, l / n)
-    final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution(n, l / n).resampleIfBelow(1)
-    final val Shift: MutationStrength = (n, l) => BinomialDistribution(n, l / n).max(1)
+    final val Standard: MutationStrength = (n, l) => BinomialDistribution.standard(n, l / n)
+    final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution.resampling(n, l / n)
+    final val Shift: MutationStrength = (n, l) => BinomialDistribution.shift(n, l / n)
 
     implicit def s2standard(dummy: 'S'): MutationStrength = Standard
     implicit def r2resampling(dummy: 'R'): MutationStrength = Resampling
@@ -213,36 +213,33 @@ object OnePlusLambdaLambdaGA {
   }
 
   object CrossoverStrength {
-    private[this] def bL(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution(d, q / l)
-    private[this] def bD(d: Int, q: Double): IntegerDistribution = BinomialDistribution(d, q / d)
-
     final val StandardL: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = bL(l, d, q)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.standard(d, q / l)
       override def isStrictlyPositive: Boolean = false
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps
     }
     final val StandardD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = bD(d, q)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.standard(d, q / d)
       override def isStrictlyPositive: Boolean = false
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps
     }
     final val ResamplingL: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bL(l, d, q).resampleIfBelow(1)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.resampling(d, q / l)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps || d == 1
     }
     final val ResamplingD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = if (q < probEps) 1 else bD(d, q).resampleIfBelow(1)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.resampling(d, q / d)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps || d == 1
     }
     final val ShiftL: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = bL(l, d, q).max(1)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.shift(d, q / l)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps || d == 1
     }
     final val ShiftD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = bD(d, q).max(1)
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.shift(d, q / d)
       override def isStrictlyPositive: Boolean = true
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps || d == 1
     }

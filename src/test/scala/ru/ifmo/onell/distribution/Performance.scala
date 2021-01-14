@@ -31,15 +31,15 @@ object Performance {
         if (p != ps.head) print("},")
         println(s"""{"p":$p,"_":[""")
         for (_ <- 0 until 10) {
-          runAndPrint(new BinomialDistribution.WithScanner(n, p), "scanner", normalizedIterations / n, n * p)
+          runAndPrint(new BinomialDistribution.StandardWithScanner(n, p), "scanner", normalizedIterations / n, n * p)
           println(",")
         }
         for (_ <- 0 until 10) {
-          runAndPrint(new BinomialDistribution.ByDefinition(n, p), "naive", normalizedIterations / n, n * p)
+          runAndPrint(new BinomialDistribution.StandardByDefinition(n, p), "naive", normalizedIterations / n, n * p)
           println(",")
         }
         for (t <- 0 until 10) {
-          runAndPrint(BinomialDistribution(n, p), "default", normalizedIterations / n, n * p)
+          runAndPrint(BinomialDistribution.standard(n, p), "default", normalizedIterations / n, n * p)
           println(if (t == 9) "]" else ",")
         }
       }
