@@ -540,9 +540,10 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
       )
 
+    val rng = new java.util.Random(872454326413212L)
     context.run { (scheduler, n) =>
       val e = 2 * n
-      val mst = TreeOnlyMST.randomGraph(n, e, 1, 2, ThreadLocalRandom.current(), NaiveDynamicGraph)
+      val mst = TreeOnlyMST.randomGraph(n, e, 1, 2, rng, NaiveDynamicGraph)
       for ((name, alg) <- algorithms) {
         scheduler addTask {
           implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
