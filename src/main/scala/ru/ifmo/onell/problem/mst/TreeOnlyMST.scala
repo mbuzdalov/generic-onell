@@ -1,6 +1,7 @@
 package ru.ifmo.onell.problem.mst
 
-import java.util.concurrent.{ThreadLocalRandom => Random}
+import java.util.Random
+import java.util.concurrent.ThreadLocalRandom
 
 import scala.annotation.tailrec
 import scala.collection.mutable.{HashSet => MuHashSet}
@@ -51,7 +52,7 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge], factory: DynamicGraph
   }
 
   override def createStorage(problemSize: Int): Individual = new Individual(nVertices, internalEdges, penalty, factory)
-  override def initializeRandomly(individual: Individual, rng: Random): Unit = individual.initializeRandomly(rng)
+  override def initializeRandomly(individual: Individual, rng: ThreadLocalRandom): Unit = individual.initializeRandomly(rng)
 }
 
 object TreeOnlyMST {
@@ -63,7 +64,7 @@ object TreeOnlyMST {
     val va, vb = rng.nextInt(nVertices)
     if (va < vb && !existing.contains(va -> vb)) {
       existing.add(va -> vb)
-      Edge(vertexA = va, vertexB = vb, weight = rng.nextInt(minWeight, maxWeight + 1))
+      Edge(vertexA = va, vertexB = vb, weight = rng.nextInt(maxWeight + 1 - minWeight) + minWeight)
     } else newRandomEdge(nVertices, minWeight, maxWeight, rng, existing)
   }
 
