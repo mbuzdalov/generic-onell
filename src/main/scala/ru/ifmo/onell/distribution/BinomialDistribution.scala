@@ -43,7 +43,7 @@ object BinomialDistribution {
 
   def shift(n: Int, p: Double): IntegerDistribution =
     if (n == 0)
-      throw new IllegalArgumentException("n is zero") // shall it be IntegerDistribution.empty?
+      IntegerDistribution.empty
     else if (n == 1 || p == 0)
       1
     else if (p == 1)
@@ -61,7 +61,7 @@ object BinomialDistribution {
 
   def resampling(n: Int, p: Double): IntegerDistribution =
     if (n == 0)
-      throw new IllegalArgumentException("n is zero") // shall it be IntegerDistribution.empty?
+      IntegerDistribution.empty
     else if (n == 1 || p == 0)
       1
     else if (p == 1)
