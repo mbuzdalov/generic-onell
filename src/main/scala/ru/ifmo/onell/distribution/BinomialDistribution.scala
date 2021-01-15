@@ -88,6 +88,7 @@ object BinomialDistribution {
   }
 
   private def checkProbability(p: Double): Unit = {
+    assert(!p.isNaN, "The probability cannot be NaN")
     assert(p >= 0, "The probability cannot be negative")
     assert(p <= 1, "The probability cannot be greater than 1")
   }

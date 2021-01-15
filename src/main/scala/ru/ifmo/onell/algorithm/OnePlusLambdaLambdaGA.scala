@@ -217,7 +217,7 @@ object OnePlusLambdaLambdaGA {
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps
     }
     final val StandardD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.standard(d, math.min(q / d, 1))
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.standard(d, math.min(q / math.max(d, 1), 1))
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps
     }
     final val ResamplingL: CrossoverStrength = new CrossoverStrength {
@@ -225,7 +225,7 @@ object OnePlusLambdaLambdaGA {
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps || d == 1
     }
     final val ResamplingD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.resampling(d, math.min(q / d, 1))
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.resampling(d, math.min(q / math.max(d, 1), 1))
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps || d == 1
     }
     final val ShiftL: CrossoverStrength = new CrossoverStrength {
@@ -233,7 +233,7 @@ object OnePlusLambdaLambdaGA {
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / l >= 1 - probEps || d == 1
     }
     final val ShiftD: CrossoverStrength = new CrossoverStrength {
-      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.shift(d, math.min(q / d, 1))
+      override def apply(l: Double, d: Int, q: Double): IntegerDistribution = BinomialDistribution.shift(d, math.min(q / math.max(d, 1), 1))
       override def willAlwaysSampleMaximum(l: Double, d: Int, q: Double): Boolean = q / d >= 1 - probEps || d == 1
     }
 
