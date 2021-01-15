@@ -23,6 +23,7 @@ object BinomialDistribution {
   }
 
   def standard(n: Int, p: Double): IntegerDistribution = {
+    checkProbability(p)
     if (n == 0)
       0
     else if (p == 0)
@@ -41,7 +42,8 @@ object BinomialDistribution {
     }
   }
 
-  def shift(n: Int, p: Double): IntegerDistribution =
+  def shift(n: Int, p: Double): IntegerDistribution = {
+    checkProbability(p)
     if (n == 0)
       IntegerDistribution.empty
     else if (n == 1 || p == 0)
@@ -58,8 +60,10 @@ object BinomialDistribution {
       else
         new ShiftByDefinition(n, p)
     }
+  }
 
-  def resampling(n: Int, p: Double): IntegerDistribution =
+  def resampling(n: Int, p: Double): IntegerDistribution = {
+    checkProbability(p)
     if (n == 0)
       IntegerDistribution.empty
     else if (n == 1 || p == 0)
@@ -81,6 +85,12 @@ object BinomialDistribution {
       else
         new ResamplingByDefinition(n, p)
     }
+  }
+
+  private def checkProbability(p: Double): Unit = {
+    assert(p >= 0, "The probability cannot be negative")
+    assert(p <= 1, "The probability cannot be greater than 1")
+  }
 
   private def sampleByDefinition(n: Int, p: Double, rng: Random): Int = {
     var i, rv = 0
