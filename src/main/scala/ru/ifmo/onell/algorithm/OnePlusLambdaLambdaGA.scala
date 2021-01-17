@@ -212,13 +212,16 @@ object OnePlusLambdaLambdaGA {
 
   object CrossoverStrength {
     import BinomialDistribution._
-    import math.{min, max}
-    final val StandardL:   CrossoverStrength = (l, d, q) => standard(d, min(q / l, 1))
-    final val StandardD:   CrossoverStrength = (_, d, q) => standard(d, min(q / max(d, 1), 1))
-    final val ResamplingL: CrossoverStrength = (l, d, q) => resampling(d, min(q / l, 1))
-    final val ResamplingD: CrossoverStrength = (_, d, q) => resampling(d, min(q / max(d, 1), 1))
-    final val ShiftL:      CrossoverStrength = (l, d, q) => shift(d, min(q / l, 1))
-    final val ShiftD:      CrossoverStrength = (_, d, q) => shift(d, min(q / max(d, 1), 1))
+    import math.max
+
+    private def standardize(p: Double): Double = if (p >= 1 - probEps) 1 else p
+
+    final val StandardL:   CrossoverStrength = (l, d, q) => standard(d, standardize(q / l))
+    final val StandardD:   CrossoverStrength = (_, d, q) => standard(d, standardize(q / max(d, 1)))
+    final val ResamplingL: CrossoverStrength = (l, d, q) => resampling(d, standardize(q / l))
+    final val ResamplingD: CrossoverStrength = (_, d, q) => resampling(d, standardize(q / max(d, 1)))
+    final val ShiftL:      CrossoverStrength = (l, d, q) => shift(d, standardize(q / l))
+    final val ShiftD:      CrossoverStrength = (_, d, q) => shift(d, standardize(q / max(d, 1)))
 
     implicit def sl2standardL(dummy: "SL"): CrossoverStrength = StandardL
     implicit def sd2standardD(dummy: "SD"): CrossoverStrength = StandardD
