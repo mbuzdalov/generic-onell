@@ -105,7 +105,7 @@ object AlgorithmCodeNames {
     "  abcde",
     "  |||||",
     "  ||||+- population size rounding: up (U), down (D), probabilistic (P)",
-    "  |||+-- good mutant strategy: ignore (I), skip crossover (S), do not count (C), do not sample (S)",
+    "  |||+-- good mutant strategy: ignore (I), skip crossover (S), do not count (C), do not sample (M)",
     "  ||+--- crossover distribution source: lambda (L), offspring distance (D)",
     "  |+---- crossover distribution shape: standard (S), shift (H), resampling (R)",
     "  +----- mutation distribution shape:  standard (S), shift (H), resampling (R)",
