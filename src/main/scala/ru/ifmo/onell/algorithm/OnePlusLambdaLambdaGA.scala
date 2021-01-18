@@ -8,18 +8,41 @@ import scala.{specialized => sp}
 
 import ru.ifmo.onell._
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer
 import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
 import ru.ifmo.onell.util.OrderedSet
 import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
 
-class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
-                            mutationStrength: MutationStrength,
-                            crossoverStrength: CrossoverStrength,
-                            goodMutantStrategy: GoodMutantStrategy,
-                            populationRounding: PopulationSizeRounding,
-                            constantTuning: ConstantTuning = defaultTuning)
+class OnePlusLambdaLambdaGA(parameterControllerCreator: ParameterControllerCreator,
+                            behaviorForGoodMutant: BehaviorForGoodMutant,
+                            compatibilityOptions: CompatibilityOptions = CompatibilityOptions.Default)
   extends Optimizer
 {
+  def this(lambdaTuning: Long => LambdaTuning,
+           mutationStrength: MutationStrength,
+           crossoverStrength: CrossoverStrength,
+           goodMutantStrategy: GoodMutantStrategy,
+           populationRounding: PopulationSizeRounding) = this(
+    parameterControllerCreator = CompatibilityLayer.createParameterController(lambdaTuning, mutationStrength,
+                                                                              crossoverStrength, goodMutantStrategy,
+                                                                              populationRounding, defaultTuning),
+    behaviorForGoodMutant = CompatibilityLayer.createBehaviorForGoodMutant(goodMutantStrategy),
+    compatibilityOptions = CompatibilityLayer.createCompatibilityOptions(goodMutantStrategy)
+  )
+
+  def this(lambdaTuning: Long => LambdaTuning,
+           mutationStrength: MutationStrength,
+           crossoverStrength: CrossoverStrength,
+           goodMutantStrategy: GoodMutantStrategy,
+           populationRounding: PopulationSizeRounding,
+           constantTuning: ConstantTuning) = this(
+    parameterControllerCreator = CompatibilityLayer.createParameterController(lambdaTuning, mutationStrength,
+                                                                              crossoverStrength, goodMutantStrategy,
+                                                                              populationRounding, constantTuning),
+    behaviorForGoodMutant = CompatibilityLayer.createBehaviorForGoodMutant(goodMutantStrategy),
+    compatibilityOptions = CompatibilityLayer.createCompatibilityOptions(goodMutantStrategy)
+  )
+
   override def optimize[I, @sp(fsp) F, @sp(csp) C]
     (fitness: Fitness[I, F, C],
      iterationLogger: IterationLogger[F])
@@ -28,7 +51,7 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
     val problemSize = fitness.problemSize
     val nChanges = fitness.numberOfChanges
     val nChangesL = fitness.changeIndexTypeToLong(nChanges)
-    val lambdaP = lambdaTuning(nChangesL)
+    val paramController = parameterControllerCreator(nChangesL)
     val rng = Random.current()
     val individual = indOps.createStorage(problemSize)
     val mutation, mutationBest, crossover, crossoverBest = deltaOps.createStorage(nChanges)
@@ -73,20 +96,19 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
                      distribution: IntegerDistribution, result: Aux[F]): Int = {
       var triedQueries, testedQueries = 0
       while (triedQueries < remaining) {
+        triedQueries += 1
         val distance = distribution.sample(rng)
         if (distance == 0) {
           updateOnParent(result, baseFitness, testedQueries == 0)
           testedQueries += 1
-          triedQueries += 1
         } else if (distance == mutantDistance) {
           updateOnCrossover(result, mutantFitness, mutationBest, testedQueries == 0)
-          triedQueries += goodMutantStrategy.incrementForTriedQueries
-          testedQueries += goodMutantStrategy.incrementForTestedQueries
+          if (compatibilityOptions.countCrossoverOffspringIdenticalToBestMutantWhenDifferentFromParent)
+            testedQueries += 1
         } else {
           deltaOps.initializeDeltaFromExisting(crossover, mutationBest, distance, rng)
           val newFitness = fitness.evaluateAssumingDelta(individual, crossover, baseFitness)
           updateOnCrossover(result, newFitness, crossover, testedQueries == 0)
-          triedQueries += 1
           testedQueries += 1
         }
       }
@@ -95,14 +117,8 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
 
     @tailrec
     def iteration(f: F, evaluationsSoFar: Long): Long = if (fitness.isOptimalFitness(f)) evaluationsSoFar else {
-      val lambda = lambdaP.lambda(rng)
-
-      val mutationPopSize = math.max(1, populationRounding(lambda, rng))
-      val crossoverPopSize = math.max(1, populationRounding(lambda * constantTuning.crossoverPopulationSizeQuotient, rng))
-
-      val mutantDistance = mutationStrength(nChangesL, constantTuning.mutationProbabilityQuotient * lambda).sample(rng)
-      val q = constantTuning.crossoverProbabilityQuotient
-      val crossDistribution = crossoverStrength(lambda, mutantDistance, q)
+      val IterationParameters(mutationPopSize, crossoverPopSize, mutantDistance, crossDistribution) =
+        paramController.getParameters(rng)
 
       var newEvaluations = evaluationsSoFar
       val bestChildFitness = if (mutantDistance == 0) {
@@ -113,17 +129,11 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
         f
       } else {
         val bestMutantFitness = runMutations(mutationPopSize, f, mutantDistance)
-        if (goodMutantStrategy == GoodMutantStrategy.SkipCrossover && fitness.compare(bestMutantFitness, f) > 0) {
+        val isMutantBetter = fitness.compare(bestMutantFitness, f) > 0
+        if (crossDistribution.isEmpty || behaviorForGoodMutant == BehaviorForGoodMutant.SkipCrossover && isMutantBetter) {
+          // Crossovers are impossible (first case) or unwanted (second case) on this iteration, we just stop the phase there
           newEvaluations += mutationPopSize
-          crossoverBest.copyFrom(mutationBest)
-          bestMutantFitness
-        } else if (crossDistribution.minValue == mutantDistance && goodMutantStrategy == GoodMutantStrategy.DoNotSampleIdentical) {
-          // A very special case, which would enter an infinite loop if not taken care.
-          // With GoodMutantStrategy.DoNotSampleIdentical,
-          // a crossover which would always sample a maximum number of bits to flip would cause an infinite loop.
-          // For this reason we say specially that we don't try crossovers in this case.
-          newEvaluations += mutationPopSize
-          if (fitness.compare(bestMutantFitness, f) > 0) {
+          if (isMutantBetter) {
             crossoverBest.copyFrom(mutationBest)
             bestMutantFitness
           } else {
@@ -132,7 +142,7 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
           }
         } else {
           val crossEvs = runCrossover(crossoverPopSize, f, bestMutantFitness, mutantDistance, crossDistribution, aux)
-          if (goodMutantStrategy == GoodMutantStrategy.DoNotSampleIdentical || goodMutantStrategy == GoodMutantStrategy.DoNotCountIdentical) {
+          if (behaviorForGoodMutant == BehaviorForGoodMutant.UpdateParent) {
             if (fitness.compare(bestMutantFitness, aux.fitness) > 0) {
               aux.fitness = bestMutantFitness
               crossoverBest.copyFrom(mutationBest)
@@ -145,16 +155,10 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
       }
 
       val budgetSpent = newEvaluations - evaluationsSoFar
-      val fitnessComparison = fitness.compare(f, bestChildFitness)
-      if (fitnessComparison < 0) {
-        lambdaP.notifyChildIsBetter(budgetSpent)
-      } else if (fitnessComparison > 0) {
-        lambdaP.notifyChildIsWorse(budgetSpent)
-      } else {
-        lambdaP.notifyChildIsEqual(budgetSpent)
-      }
+      val fitnessComparison = fitness.compare(bestChildFitness, f)
+      paramController.receiveFeedback(budgetSpent, fitnessComparison)
 
-      val nextFitness = if (fitnessComparison <= 0) {
+      val nextFitness = if (fitnessComparison >= 0) {
         val theFitness = fitness.applyDelta(individual, crossoverBest, f)
         assert(fitness.compare(bestChildFitness, theFitness) == 0,
                s"Fitness incremental evaluation seems broken: $bestChildFitness != $theFitness")
@@ -172,6 +176,32 @@ class OnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
 }
 
 object OnePlusLambdaLambdaGA {
+  case class IterationParameters(firstPopulationSize: Int,
+                                 secondPopulationSize: Int,
+                                 numberOfChangesInEachMutant: Int,
+                                 numberOfChangesInCrossoverOffspring: IntegerDistribution)
+
+  trait ParameterController {
+    def getParameters(rng: Random): IterationParameters
+    def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit
+  }
+
+  trait ParameterControllerCreator {
+    def apply(nChanges: Long): ParameterController
+  }
+
+  sealed trait BehaviorForGoodMutant
+  object BehaviorForGoodMutant {
+    case object IgnoreExistence extends BehaviorForGoodMutant
+    case object SkipCrossover extends BehaviorForGoodMutant
+    case object UpdateParent extends BehaviorForGoodMutant
+  }
+
+  case class CompatibilityOptions(countCrossoverOffspringIdenticalToBestMutantWhenDifferentFromParent: Boolean)
+  object CompatibilityOptions {
+    final val Default = CompatibilityOptions(countCrossoverOffspringIdenticalToBestMutantWhenDifferentFromParent = false)
+  }
+
   private[this] val probEps = 1e-10
 
   trait PopulationSizeRounding {
