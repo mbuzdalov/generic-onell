@@ -3,7 +3,7 @@ package ru.ifmo.onell.main
 import java.util.concurrent.ThreadLocalRandom
 import java.util.{Locale, Random}
 
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
 import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
 import ru.ifmo.onell.problem.RandomPlanted3SAT._
@@ -66,26 +66,26 @@ object FixedBudget extends Main.Module {
   private val optimizers: IndexedSeq[(String, TerminationConditionTracker[Int] => Optimizer)] = IndexedSeq(
     ("(1+1) EA aware", _ => OnePlusOneEA.Resampling),
     ("(1+1) EA unaware", _ => OnePlusOneEA.Standard),
-    ("uncapped unaware", t => new OnePlusLambdaLambdaGA(t.attachedTuning(defaultOneFifthLambda),
+    ("uncapped unaware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(defaultOneFifthLambda),
+                                                          mutationStrength = 'S',
+                                                          crossoverStrength = "SL",
+                                                          goodMutantStrategy = 'I',
+                                                          populationRounding = 'D')),
+    ("uncapped aware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(defaultOneFifthLambda),
+                                                        mutationStrength = 'R',
+                                                        crossoverStrength = "RL",
+                                                        goodMutantStrategy = 'C',
+                                                        populationRounding = 'D')),
+    ("capped unaware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(logCappedOneFifthLambda),
                                                         mutationStrength = 'S',
                                                         crossoverStrength = "SL",
                                                         goodMutantStrategy = 'I',
                                                         populationRounding = 'D')),
-    ("uncapped aware", t => new OnePlusLambdaLambdaGA(t.attachedTuning(defaultOneFifthLambda),
+    ("capped aware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(logCappedOneFifthLambda),
                                                       mutationStrength = 'R',
                                                       crossoverStrength = "RL",
                                                       goodMutantStrategy = 'C',
                                                       populationRounding = 'D')),
-    ("capped unaware", t => new OnePlusLambdaLambdaGA(t.attachedTuning(logCappedOneFifthLambda),
-                                                      mutationStrength = 'S',
-                                                      crossoverStrength = "SL",
-                                                      goodMutantStrategy = 'I',
-                                                      populationRounding = 'D')),
-    ("capped aware", t => new OnePlusLambdaLambdaGA(t.attachedTuning(logCappedOneFifthLambda),
-                                                    mutationStrength = 'R',
-                                                    crossoverStrength = "RL",
-                                                    goodMutantStrategy = 'C',
-                                                    populationRounding = 'D')),
     )
 
   private def runHardSat(problemSizes: Seq[Int]): Unit = {

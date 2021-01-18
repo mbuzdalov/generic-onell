@@ -9,8 +9,8 @@ import scala.jdk.CollectionConverters._
 import scala.util.Using
 
 import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.algorithm.OnePlusOneEA
 import ru.ifmo.onell.problem.mst.TreeOnlyMST
 import ru.ifmo.onell.problem.mst.util.NaiveDynamicGraph
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
@@ -125,18 +125,18 @@ object RunningTimes extends Main.Module {
     val algorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
-      "(1+(λ,λ)) GA, λ<=n" -> new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.1)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.3)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.7)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.9)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=6" -> new OnePlusLambdaLambdaGA(fixedLambda(6), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=8" -> new OnePlusLambdaLambdaGA(fixedLambda(8), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=12" -> new OnePlusLambdaLambdaGA(fixedLambda(12), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=fixed optimal" -> new OnePlusLambdaLambdaGA(fixedLogTowerLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=n" -> createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.1)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.3)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.7)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.9)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=6" -> createOnePlusLambdaLambdaGA(fixedLambda(6), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=8" -> createOnePlusLambdaLambdaGA(fixedLambda(8), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=12" -> createOnePlusLambdaLambdaGA(fixedLambda(12), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=fixed optimal" -> createOnePlusLambdaLambdaGA(fixedLogTowerLambda, 'R', "RL", 'C', 'D'),
     )
 
     context.run { (scheduler, n) =>
@@ -154,7 +154,7 @@ object RunningTimes extends Main.Module {
       (beta, capLimit) <- Seq(2.1 -> 1024, 2.3 -> 4096, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
       cap <- (2 to 30).map(1 << _).filter(_ <= capLimit)
     } yield {
-      (beta, cap, new OnePlusLambdaLambdaGA(powerLawLambda(beta, _ => cap), 'R', "RL", 'C', 'D'))
+      (beta, cap, createOnePlusLambdaLambdaGA(powerLawLambda(beta, _ => cap), 'R', "RL", 'C', 'D'))
     }
 
     context.run { (scheduler, n) =>
@@ -173,13 +173,13 @@ object RunningTimes extends Main.Module {
     val algorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
-      "(1+(λ,λ)) GA, λ<=n" -> new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.1)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.3)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.7)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.9)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=n" -> createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.1)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.3)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.7)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.9)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
     )
 
     context.run { (scheduler, n) =>
@@ -223,7 +223,7 @@ object RunningTimes extends Main.Module {
       (r, rounding) <- populationSizeRoundings
     } yield {
       val jsonNamePart = s""""lambda":"$l","mutation":"$m","crossover":"$c","good mutant":"$g","rounding":"$r""""
-      val algGenerator = () => new OnePlusLambdaLambdaGA(lambdaStrategy, mutationStrength, crossoverStrength,
+      val algGenerator = () => createOnePlusLambdaLambdaGA(lambdaStrategy, mutationStrength, crossoverStrength,
                                                          goodMutantStrategy, rounding)
       jsonNamePart -> algGenerator
     }
@@ -265,22 +265,22 @@ object RunningTimes extends Main.Module {
     ("RLS", OnePlusOneEA.RLS),
     ("(1+1) EA", OnePlusOneEA.Standard),
     ("*(1+1) EA", OnePlusOneEA.Shift),
-    ("$\\\\lambda=8$", new OnePlusLambdaLambdaGA(fixedLambda(8), 'S', "SL", 'I', 'U')),
-    ("$\\\\lambdabound=n$", new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'S', "SL", 'I', 'U')),
-    ("*$\\\\lambda=8$", new OnePlusLambdaLambdaGA(fixedLambda(8), 'H', "HD", 'C', 'U')),
-    ("*$\\\\lambdabound=n$", new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'H', "HD", 'C', 'U')),
+    ("$\\\\lambda=8$", createOnePlusLambdaLambdaGA(fixedLambda(8), 'S', "SL", 'I', 'U')),
+    ("$\\\\lambdabound=n$", createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'S', "SL", 'I', 'U')),
+    ("*$\\\\lambda=8$", createOnePlusLambdaLambdaGA(fixedLambda(8), 'H', "HD", 'C', 'U')),
+    ("*$\\\\lambdabound=n$", createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'H', "HD", 'C', 'U')),
   )
 
   private val parameterTuningExperimentAlgorithmSelection = Seq(
     ("RLS", OnePlusOneEA.RLS),
     ("(1+1) EA", OnePlusOneEA.Standard),
     ("*(1+1) EA", OnePlusOneEA.Shift),
-    ("$\\\\lambda=8$", new OnePlusLambdaLambdaGA(fixedLambda(8), 'S', "SL", 'I', 'P')),
-    ("$\\\\lambdabound=n$", new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'S', "SL", 'I', 'P')),
-    ("$\\\\lambdabound\\\\sim\\\\ln n$", new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'S', "SL", 'I', 'P')),
-    ("*$\\\\lambda=8$", new OnePlusLambdaLambdaGA(fixedLambda(8), 'H', "HD", 'C', 'P')),
-    ("*$\\\\lambdabound=n$", new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'H', "HD", 'C', 'P')),
-    ("*$\\\\lambdabound\\\\sim\\\\ln n$", new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'H', "HD", 'C', 'P')),
+    ("$\\\\lambda=8$", createOnePlusLambdaLambdaGA(fixedLambda(8), 'S', "SL", 'I', 'P')),
+    ("$\\\\lambdabound=n$", createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'S', "SL", 'I', 'P')),
+    ("$\\\\lambdabound\\\\sim\\\\ln n$", createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'S', "SL", 'I', 'P')),
+    ("*$\\\\lambda=8$", createOnePlusLambdaLambdaGA(fixedLambda(8), 'H', "HD", 'C', 'P')),
+    ("*$\\\\lambdabound=n$", createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'H', "HD", 'C', 'P')),
+    ("*$\\\\lambdabound\\\\sim\\\\ln n$", createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'H', "HD", 'C', 'P')),
   )
 
   private def bitsParameterTuningLinearDouble(context: Context, maxWeight: Double): Unit = {
@@ -364,15 +364,15 @@ object RunningTimes extends Main.Module {
     def makeHeavy(betaTen: Range, cap: Long => Long, capName: String): Seq[(String, Optimizer)] = betaTen map { b10 =>
       val b = b10 / 10.0
       val name = s"(1+(λ,λ)) GA, λ~pow($b), u=$capName"
-      val algo = new OnePlusLambdaLambdaGA(powerLawLambda(b, cap), 'R', "RL", 'C', 'U')
+      val algo = createOnePlusLambdaLambdaGA(powerLawLambda(b, cap), 'R', "RL", 'C', 'U')
       (name, algo)
     }
 
     val basicAlgorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
-      "(1+(λ,λ)) GA, λ<=n" -> new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U'),
-      "(1+(λ,λ)) GA, λ<=2ln(n+1)" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U'),
+      "(1+(λ,λ)) GA, λ<=n" -> createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U'),
+      "(1+(λ,λ)) GA, λ<=2ln(n+1)" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U'),
     )
 
     val algorithms = basicAlgorithms ++
@@ -396,7 +396,7 @@ object RunningTimes extends Main.Module {
 
   private def bitsMaxSATCapping(context: Context): Unit = {
     def makeHeavy(b: Double, cap: Int): Optimizer = {
-      new OnePlusLambdaLambdaGA(powerLawLambda(b, _ => cap), 'R', "RL", 'C', 'U')
+      createOnePlusLambdaLambdaGA(powerLawLambda(b, _ => cap), 'R', "RL", 'C', 'U')
     }
 
     val algorithms = for {
@@ -460,13 +460,13 @@ object RunningTimes extends Main.Module {
     val algorithms = Seq(
       ("RLS", Int.MaxValue, OnePlusOneEA.RLS),
       ("(1+1) EA", Int.MaxValue, OnePlusOneEA.Resampling),
-      ("(1+(λ,λ)) GA, λ<=n", 16384, new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ<=2ln n", Int.MaxValue, new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.1)", Int.MaxValue, new OnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.3)", Int.MaxValue, new OnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.5)", Int.MaxValue, new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.7)", Int.MaxValue, new OnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.9)", Int.MaxValue, new OnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ<=n", 16384, createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ<=2ln n", Int.MaxValue, createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.1)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.3)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.3), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.5)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.7)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.9)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'U')),
     )
 
     val seeder = new Random(314252354)
@@ -490,11 +490,11 @@ object RunningTimes extends Main.Module {
     val algorithms = Seq(
       ("RLS", Int.MaxValue, OnePlusOneEA.RLS),
       ("(1+1) EA", Int.MaxValue, OnePlusOneEA.Resampling),
-      ("(1+(λ,λ)) GA, λ=10", Int.MaxValue, new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ=2ln n", Int.MaxValue, new OnePlusLambdaLambdaGA(fixedLogLambda, 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ<=2ln n", Int.MaxValue, new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ<=n", 256, new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U')),
-      ("(1+(λ,λ)) GA, λ~pow(2.5)", 4096, new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ=10", Int.MaxValue, createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ=2ln n", Int.MaxValue, createOnePlusLambdaLambdaGA(fixedLogLambda, 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ<=2ln n", Int.MaxValue, createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ<=n", 256, createOnePlusLambdaLambdaGA(defaultOneFifthLambda, 'R', "RL", 'C', 'U')),
+      ("(1+(λ,λ)) GA, λ~pow(2.5)", 4096, createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U')),
     )
 
     context.run { (scheduler, n) =>
@@ -512,9 +512,9 @@ object RunningTimes extends Main.Module {
   private def vertexCoverPSSimple(context: Context): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
-      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
     )
 
     context.run { (scheduler, nn) =>
@@ -535,10 +535,10 @@ object RunningTimes extends Main.Module {
   private def treeOnlyMST(context: Context): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
-      "(1+(λ,λ)) GA, λ<=2ln n" -> new OnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> new OnePlusLambdaLambdaGA(powerLawLambda(2.5, i => math.sqrt(i.toDouble).toLong), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=10" -> new OnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
-      )
+      "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5, i => math.sqrt(i.toDouble).toLong), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+    )
 
     val rng = new java.util.Random(872454326413212L)
     context.run { (scheduler, n) =>

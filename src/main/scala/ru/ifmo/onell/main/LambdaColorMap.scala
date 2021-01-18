@@ -9,7 +9,7 @@ import scala.util.Using
 import scala.Ordering.Double.TotalOrdering
 
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.main.util.AlgorithmCodeNames
 import ru.ifmo.onell.problem.HammingDistance._
 import ru.ifmo.onell.problem.{LinearRandomIntegerWeights, OneMaxPerm, RandomPlanted3SAT}
@@ -140,7 +140,7 @@ object LambdaColorMap extends Main.Module {
 
   //noinspection SameParameterValue: IDEA wrongly reports `file` to have the same parameter value for interpolated arg
   private def collect3DPlots[@specialized(Specialization.fitnessSpecialization) F]
-                            (optimizerFromLambda: (Long => OnePlusLambdaLambdaGA.LambdaTuning) => OnePlusLambdaLambdaGA,
+                            (optimizerFromLambda: (Long => LambdaTuning) => OnePlusLambdaLambdaGA,
                              problemInstanceGen: (Int, Long) => Fitness[Array[Boolean], F, Int],
                              n: Int, runs: Int, lambdaPower: Double, file: String)
                             (implicit fitness2long: F => Long): Unit = {
@@ -197,7 +197,7 @@ object LambdaColorMap extends Main.Module {
       collect3DPlots(algFun, problemInstanceGen, n, runs, lambdaPower, s"$filePrefix-$code")
 
   //noinspection SameParameterValue: IDEA wrongly reports `file` to have the same parameter value for interpolated arg
-  private def collect3DPlotsPerm(optimizerFromLambda: (Long => OnePlusLambdaLambdaGA.LambdaTuning) => OnePlusLambdaLambdaGA,
+  private def collect3DPlotsPerm(optimizerFromLambda: (Long => LambdaTuning) => OnePlusLambdaLambdaGA,
                                   n: Int, runs: Int, lambdaPower: Double, maxLambda: Double, file: String): Unit = {
     val executor = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
     Using.resources(

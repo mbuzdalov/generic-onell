@@ -1,7 +1,8 @@
 package ru.ifmo.onell.main.util
 
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 
 object AlgorithmCodeNames {
   private val mutationDistributions = Map(
@@ -76,7 +77,7 @@ object AlgorithmCodeNames {
   }
 
   def parseOnePlusLambdaLambdaGenerators(mask: String): Seq[
-    ((Long => OnePlusLambdaLambdaGA.LambdaTuning) => OnePlusLambdaLambdaGA, String)
+    ((Long => LambdaTuning) => OnePlusLambdaLambdaGA, String)
   ] = {
     for {
       singleMask <- mask.split(',').toIndexedSeq
@@ -86,14 +87,14 @@ object AlgorithmCodeNames {
       goodMutantSym <- expandGoodMutantStrategy(singleMask(3))
       roundingSym <- expandPopulationSizeRounding(singleMask(4))
     } yield {
-      val alg = (lambdaTuning: Long => OnePlusLambdaLambdaGA.LambdaTuning) => new OnePlusLambdaLambdaGA(
+      val alg = (lambdaTuning: Long => LambdaTuning) => createOnePlusLambdaLambdaGA(
         lambdaTuning = lambdaTuning,
         mutationStrength = mutationDistributions(mutDistSym),
         crossoverStrength = parseCrossoverDistribution(crossDistShapeSym, crossDistSourceSym),
         goodMutantStrategy = goodMutantStrategies(goodMutantSym),
         constantTuning = defaultTuning,
         populationRounding = populationSizeRoundings(roundingSym)
-        )
+      )
       val code = s"$mutDistSym$crossDistShapeSym$crossDistSourceSym$goodMutantSym$roundingSym"
       (alg, code)
     }

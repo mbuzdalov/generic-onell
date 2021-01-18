@@ -3,7 +3,7 @@ package ru.ifmo.onell.algorithm
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA.defaultOneFifthLambda
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.main.util.AlgorithmCodeNames
 import ru.ifmo.onell.problem.OneMax
 

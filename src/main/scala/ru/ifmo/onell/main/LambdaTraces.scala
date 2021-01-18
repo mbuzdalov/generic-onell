@@ -8,7 +8,7 @@ import scala.util.Using
 
 import ru.ifmo.onell.{Fitness, IterationLogger, Main}
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.main.util.AlgorithmCodeNames
 import ru.ifmo.onell.problem.HammingDistance._
 import ru.ifmo.onell.problem.{LinearRandomIntegerWeights, RandomPlanted3SAT}

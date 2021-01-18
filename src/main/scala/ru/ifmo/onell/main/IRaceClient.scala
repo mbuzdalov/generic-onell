@@ -4,7 +4,7 @@ import java.net.{DatagramPacket, DatagramSocket}
 
 import ru.ifmo.onell._
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, OneMax, RandomPlanted3SAT}
 import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
 
@@ -210,7 +210,7 @@ object IRaceClient extends Main.Module {
 
   def parseOptimizer(optimizerName: String, args: Array[String]): Optimizer = {
     optimizerName match {
-      case "oll" => new OnePlusLambdaLambdaGA(
+      case "oll" => createOnePlusLambdaLambdaGA(
         lambdaTuning = parseLambdaTuning(args).value,
         mutationStrength = parseMutationStrength(args).value,
         crossoverStrength = parseCrossoverStrength(args).value,
