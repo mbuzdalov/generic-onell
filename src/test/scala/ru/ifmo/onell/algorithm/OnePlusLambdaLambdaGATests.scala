@@ -34,7 +34,7 @@ class OnePlusLambdaLambdaGATests extends AnyFlatSpec with Matchers {
     val size = 200
     val om = new OneMax(size)
     val ll = new OnePlusLambdaLambdaGA(defaultOneFifthLambda, 'S', "SL", 'I', 'U')
-    val runs = IndexedSeq.fill(100)(ll.optimize(om))
+    val runs = IndexedSeq.fill(200)(ll.optimize(om))
     val found = runs.sum.toDouble / runs.size
     found should (be <= 2120.0)
     found should (be >= 1800.0)
