@@ -9,11 +9,13 @@ import scala.jdk.CollectionConverters._
 import scala.util.Using
 
 import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
+import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
+import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
-import ru.ifmo.onell.algorithm.OnePlusOneEA
+import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
 import ru.ifmo.onell.problem.mst.TreeOnlyMST
 import ru.ifmo.onell.problem.mst.util.NaiveDynamicGraph
-import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
+import ru.ifmo.onell.problem.{Jump, LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
 import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutor, SequentialExecutor}
 
 object RunningTimes extends Main.Module {
@@ -25,6 +27,7 @@ object RunningTimes extends Main.Module {
     "The following commands run experiments for problems on bit strings:",
     "  bits:om         <context>: for OneMax",
     "  bits:om:cap     <context>: same for heavy-tailed algorithms with various capping",
+    "  bits:om:3d      <context>: same for the independent parameter sampling from three distributions",
     "  bits:om:sqrt    <context>: same but starting at the distance of sqrt(n) from the end",
     "  bits:om:log     <context>: same but starting at the distance of log(n+1) from the end",
     "  bits:om:lin     <context>: same but starting at the distance of d from the end, d is passed with --d option",
@@ -53,6 +56,8 @@ object RunningTimes extends Main.Module {
     "  bits:sat:lambda <context>: same for the MAX-SAT problem with logarithmic density",
     "  bits:mst-tree   <context>: same for the minimum spanning tree problem with individuals encoding E=V-1 graphs",
     "  bits:vcp        <context>: same for the vertex cover problem (here, --from and --to control actual vertex numbers)",
+    "  bits:jump:3d    <context>: same for Jump and independent parameter sampling from three distributions",
+    "                             (--from and --to control problem size directly)",
     "The following commands run experiments for problems on permutations:",
     "  perm:om         <context>: for the permutation flavour of OneMax",
     "The <context> arguments, all mandatory, are:",
@@ -66,6 +71,7 @@ object RunningTimes extends Main.Module {
   override def moduleMain(args: Array[String]): Unit = args(0) match {
     case "bits:om"         => bitsOneMaxSimple(parseContext(args))
     case "bits:om:cap"     => bitsOneMaxCapping(parseContext(args))
+    case "bits:om:3d"      => threeDistributionsOneMax(parseContext(args))
     case "bits:om:sqrt"    => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
     case "bits:om:log"     => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "bits:l2d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 2.0)
@@ -81,6 +87,7 @@ object RunningTimes extends Main.Module {
     case "bits:sat:log"    => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "bits:vcp"        => vertexCoverPSSimple(parseContext(args))
     case "bits:mst-tree"   => treeOnlyMST(parseContext(args))
+    case "bits:jump:3d"    => threeDistributionsJump(parseContext(args))
     case "perm:om"         => permOneMaxSimple(parseContext(args))
     case "bits:om:tuning"  => bitsOneMaxAllTuningChoices(parseContext(args))
     case "bits:l2d:tuning" => bitsLinearTunings(parseContext(args), 2.0)
@@ -553,6 +560,75 @@ object RunningTimes extends Main.Module {
           s"""{"nVertices":$n,"nEdges":$e,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
         }
       }
+    }
+  }
+
+  private def threeDistributionsOneMax(context: Context): Unit = {
+    val algorithms = for {
+      betaL <- Seq(2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2)
+      distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
+      betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
+    } yield {
+      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
+      val controller = new ThreeDistributionController(betaPC, distLFun)
+      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+    }
+
+    context.run { (scheduler, n) =>
+      for ((betaPC, betaL, alg) <- algorithms) {
+        scheduler.addTask {
+          val time = alg.optimize(new OneMax(n))
+          val timeD = time.toDouble
+          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time,"runtime over n":${timeD / n},"runtime over n^2":${timeD / n / n}}"""
+        }
+      }
+    }
+  }
+
+  private def threeDistributionsJump(context: Context): Unit = {
+    val algorithms = for {
+      betaL <- Seq(2.0, 2.2, 2.4)
+      distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and few gigs of memory
+      betaPC <- Seq(1.0, 1.2, 1.4)
+    } yield {
+      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
+      val controller = new ThreeDistributionController(betaPC, distLFun)
+      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+    }
+
+    context.run { (scheduler, n) =>
+      for ((betaPC, betaL, alg) <- algorithms) {
+        for (k <- 2 to 6 if k * 4 <= n) {
+          scheduler.addTask {
+            val time = alg.optimize(new Jump(n, k))
+            val timeD = time.toDouble
+            s"""{"n":$n,"betaL":$betaL,"betaPC":$betaPC,"k":$k,"runtime":$time}"""
+          }
+        }
+      }
+    }
+  }
+
+  private class ThreeDistributionController(betaPC: Double, distL: Long => IntegerDistribution)
+    extends ParameterControllerCreator {
+    override def apply(nChanges: Long): ParameterController = new ParameterController {
+      private val nSqrt = math.sqrt(nChanges)
+      private val powerLawPC = PowerLawDistribution(nSqrt.toInt, betaPC)
+      private val powerLawLambda = distL(nChanges)
+
+      override def getParameters(rng: ThreadLocalRandom): IterationParameters = {
+        val lambda = powerLawLambda.sample(rng)
+        val mutantDistance = BinomialDistribution.standard(nChanges, powerLawPC.sample(rng) / nSqrt).sample(rng)
+        IterationParameters(
+          firstPopulationSize = lambda,
+          secondPopulationSize = lambda,
+          numberOfChangesInEachMutant = mutantDistance,
+          numberOfChangesInCrossoverOffspring =
+            BinomialDistribution.standard(mutantDistance, powerLawPC.sample(rng) / nSqrt)
+        )
+      }
+
+      override def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit = {}
     }
   }
 
