@@ -578,8 +578,7 @@ object RunningTimes extends Main.Module {
       for ((betaPC, betaL, alg) <- algorithms) {
         scheduler.addTask {
           val time = alg.optimize(new OneMax(n))
-          val timeD = time.toDouble
-          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time,"runtime over n":${timeD / n},"runtime over n^2":${timeD / n / n}}"""
+          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time}"""
         }
       }
     }
