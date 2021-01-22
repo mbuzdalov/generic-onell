@@ -600,7 +600,6 @@ object RunningTimes extends Main.Module {
         for (k <- 2 to 6 if k * 4 <= n) {
           scheduler.addTask {
             val time = alg.optimize(new Jump(n, k))
-            val timeD = time.toDouble
             s"""{"n":$n,"betaL":$betaL,"betaPC":$betaPC,"k":$k,"runtime":$time}"""
           }
         }
