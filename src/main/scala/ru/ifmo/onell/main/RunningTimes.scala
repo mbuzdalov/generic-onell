@@ -610,7 +610,7 @@ object RunningTimes extends Main.Module {
   private class ThreeDistributionController(betaPC: Double, distL: Long => IntegerDistribution)
     extends ParameterControllerCreator {
     override def apply(nChanges: Long): ParameterController = new ParameterController {
-      private val nSqrt = math.sqrt(nChanges)
+      private val nSqrt = math.sqrt(nChanges.toDouble)
       private val powerLawPC = PowerLawDistribution(nSqrt.toInt, betaPC)
       private val powerLawLambda = distL(nChanges)
 
