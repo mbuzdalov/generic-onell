@@ -4,8 +4,9 @@ import java.util.concurrent.ThreadLocalRandom
 import java.util.{Locale, Random}
 
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
+import ru.ifmo.onell.algorithm.OnePlusOneEA
+import ru.ifmo.onell.distribution.PowerLawDistribution
+import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomKnapsack, RandomPlanted3SAT}
 import ru.ifmo.onell.problem.RandomPlanted3SAT._
 import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp}
 import ru.ifmo.onell.{Fitness, HasIndividualOperations, IterationLogger, Main, Optimizer}
@@ -19,7 +20,8 @@ object FixedBudget extends Main.Module {
     "on hard MAX-SAT instances and the multidimensional knapsack problem.",
     "Parameters:",
     "  - sat: run the experiment on hard MAX-SAT instances",
-    "  - mkp: run the experiment on the multidimensional knapsack problem"
+    "  - mkp: run the experiment on the multidimensional knapsack problem",
+    "  - rkp: run the experiment on the random knapsack problem"
   )
 
   override def moduleMain(args: Array[String]): Unit = {
@@ -27,6 +29,7 @@ object FixedBudget extends Main.Module {
     args(0) match {
       case "sat" => runHardSat((4 to 28).map(v => v * v))
       case "mkp" => runMultiDimensionalKnapsack()
+      case "rkp" => runRandomKnapsack()
       case _ => throw new IllegalArgumentException(s"Unknown command for $name: ${args(0)}")
     }
   }
@@ -163,6 +166,45 @@ object FixedBudget extends Main.Module {
       }
       println("};")
       println(s"\\addlegendentry{$name};")
+    }
+  }
+
+  private def runRandomKnapsack(optimizer: Optimizer, ff: RandomKnapsack): Long = {
+    val tracker = new TerminationConditionTracker[(Long, Long)](ff, if (ff.problemSize < 1000) 1000000 else 8000000)
+    try {
+      implicit val individualOps: RandomKnapsack = ff
+      optimizer.optimize(ff, tracker)
+      throw new AssertionError("Cannot reach here for this problem")
+    } catch {
+      case BudgetReached((_, fitness: Long)) => fitness
+    }
+  }
+
+  private def runRandomKnapsack(): Unit = {
+    val rkOptimizers = Seq(
+      ("(1+1) EA std       ", OnePlusOneEA.Standard),
+      ("(1+1) EA shift     ", OnePlusOneEA.Shift),
+      ("(1+1) EA resampling", OnePlusOneEA.Resampling),
+      ("(1+1) Heavy        ", new OnePlusOneEA(n => PowerLawDistribution(n, 1.5))),
+      ("RRLCD 1/5 log      ", createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D')),
+      ("HHLCD 1/5 log      ", createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'H', "HL", 'C', 'D')),
+      ("RRLCD heavy        ", createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D')),
+      ("HHLCD heavy        ", createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'H', "HL", 'C', 'D')),
+    )
+
+    val knapsackCfg = Seq((100, 1000), (200, 2400), (400, 4000), (600, 6000),
+      (800, 8000), (1000, 10000), (1200, 14000), (1500, 16000), (2000, 20000), (3000, 25000))
+
+    for (((n, c), idx) <- knapsackCfg.zipWithIndex) {
+      for (opt <- rkOptimizers) {
+        print(s"n=$n, opt=${opt._1} => ")
+        for (instanceId <- 0 until 10) {
+          val problem = new RandomKnapsack(n, c, idx + instanceId * knapsackCfg.size)
+          val local = for (_ <- 0 until 10) yield runRandomKnapsack(opt._2, problem)
+          print(s" ${local.sum / 10.0}")
+        }
+        println()
+      }
     }
   }
 }
