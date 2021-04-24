@@ -233,4 +233,58 @@ object BinomialDistribution {
       if (value == 0) sampleImpl(rng) else value
     }
   }
+
+  private def runInversionScanner(rng: Random, r0: Double, a: Double, s: Double): Int = {
+    var x = 0
+    var u = rng.nextDouble()
+    var r = r0
+    while (u > r) {
+      x += 1
+      u -= r
+      r = ((a / x) - s) * r
+    }
+    x
+  }
+
+  private[distribution] class StandardWithInverseTransformation(n: Int, p: Double) extends IntegerDistribution {
+    private[this] val q = 1 - p
+    private[this] val s = p / q
+    private[this] val a = (n + 1) * s
+    private[this] val r0 = math.pow(q, n)
+
+    override def sample(rng: Random): Int = runInversionScanner(rng, r0, a, s)
+    override def minValue: Int = 0
+    override def maxValue: Int = n
+  }
+
+  private[distribution] class StandardWithInverseTransformationInverted(n: Int, p: Double) extends IntegerDistribution {
+    private[this] val s = (1 - p) / p
+    private[this] val a = (n + 1) * s
+    private[this] val r0 = math.pow(p, n)
+
+    override def sample(rng: Random): Int = n - runInversionScanner(rng, r0, a, s)
+    override def minValue: Int = 0
+    override def maxValue: Int = n
+  }
+
+  private[distribution] class ShiftWithInverseTransformation(n: Int, p: Double) extends IntegerDistribution {
+    private[this] val q = 1 - p
+    private[this] val s = p / q
+    private[this] val a = (n + 1) * s
+    private[this] val r0 = math.pow(q, n)
+
+    override def sample(rng: Random): Int = math.max(1, runInversionScanner(rng, r0, a, s))
+    override def minValue: Int = 1
+    override def maxValue: Int = n
+  }
+
+  private[distribution] class ShiftWithInverseTransformationInverted(n: Int, p: Double) extends IntegerDistribution {
+    private[this] val s = (1 - p) / p
+    private[this] val a = (n + 1) * s
+    private[this] val r0 = math.pow(p, n)
+
+    override def sample(rng: Random): Int = math.max(1, n - runInversionScanner(rng, r0, a, s))
+    override def minValue: Int = 1
+    override def maxValue: Int = n
+  }
 }
