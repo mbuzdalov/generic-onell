@@ -69,16 +69,16 @@ object Performance {
         ("naive",    _ => true, (n, p) => new BinomialDistribution.StandardByDefinition(n, p)),
         ("scanner+", _ <= 0.6,  (n, p) => new BinomialDistribution.StandardWithScanner(n, p)),
         ("scanner-", _ >= 0.4,  (n, p) => new BinomialDistribution.StandardWithScannerInverted(n, p)),
-        ("inverse+", _ => true, (n, p) => new BinomialDistribution.StandardWithInverseTransformation(n, p)),
-        ("inverse-", _ => true, (n, p) => new BinomialDistribution.StandardWithInverseTransformationInverted(n, p)),
+        ("inverse+", _ <= 0.6, (n, p) => new BinomialDistribution.StandardWithInverseTransformation(n, p)),
+        ("inverse-", _ >= 0.4, (n, p) => new BinomialDistribution.StandardWithInverseTransformationInverted(n, p)),
       ))
       case "shift" => evaluate("binomial-performance-shift.json", Seq(
         ("default",  _ => true, (n, p) => BinomialDistribution.shift(n, p)),
         ("naive",    _ => true, (n, p) => new BinomialDistribution.ShiftByDefinition(n, p)),
         ("scanner+", _ <= 0.6,  (n, p) => new BinomialDistribution.ShiftWithScanner(n, p)),
         ("scanner-", _ >= 0.4,  (n, p) => new BinomialDistribution.ShiftWithScannerInverted(n, p)),
-        ("inverse+", _ => true, (n, p) => new BinomialDistribution.ShiftWithInverseTransformation(n, p)),
-        ("inverse-", _ => true, (n, p) => new BinomialDistribution.ShiftWithInverseTransformationInverted(n, p)),
+        ("inverse+", _ <= 0.6, (n, p) => new BinomialDistribution.ShiftWithInverseTransformation(n, p)),
+        ("inverse-", _ >= 0.4, (n, p) => new BinomialDistribution.ShiftWithInverseTransformationInverted(n, p)),
       ))
       case "resampling" => evaluate("binomial-performance-resampling.json", Seq(
         ("default",  _ => true, (n, p) => BinomialDistribution.resampling(n, p)),
