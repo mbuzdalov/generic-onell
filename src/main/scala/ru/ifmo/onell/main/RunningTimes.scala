@@ -567,18 +567,19 @@ object RunningTimes extends Main.Module {
     val algorithms = for {
       betaL <- Seq(2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
-      betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
+      betaP <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
+      betaC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
     } yield {
       def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaPC, distLFun)
-      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+      val controller = new ThreeDistributionController(betaP, betaC, distLFun)
+      (betaP, betaC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
     }
 
     context.run { (scheduler, n) =>
-      for ((betaPC, betaL, alg) <- algorithms) {
+      for ((betaP, betaC, betaL, alg) <- algorithms) {
         scheduler.addTask {
           val time = alg.optimize(new OneMax(n))
-          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time}"""
+          s"""{"n":$n,"betaP":$betaP,"betaC":$betaC,"betaL":$betaL,"runtime":$time}"""
         }
       }
     }
@@ -588,41 +589,43 @@ object RunningTimes extends Main.Module {
     val algorithms = for {
       betaL <- Seq(2.0, 2.2, 2.4)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and few gigs of memory
-      betaPC <- Seq(1.0, 1.2, 1.4)
+      betaP <- Seq(1.0, 1.2, 1.4)
+      betaC <- Seq(1.0, 1.2, 1.4)
     } yield {
       def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaPC, distLFun)
-      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+      val controller = new ThreeDistributionController(betaP, betaC, distLFun)
+      (betaP, betaC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
     }
 
     context.run { (scheduler, n) =>
-      for ((betaPC, betaL, alg) <- algorithms) {
+      for ((betaP, betaC, betaL, alg) <- algorithms) {
         for (k <- 2 to 6 if k * 4 <= n) {
           scheduler.addTask {
             val time = alg.optimize(new Jump(n, k))
-            s"""{"n":$n,"betaL":$betaL,"betaPC":$betaPC,"k":$k,"runtime":$time}"""
+            s"""{"n":$n,"betaL":$betaL,"betaP":$betaP,"betaC":$betaC,"k":$k,"runtime":$time}"""
           }
         }
       }
     }
   }
 
-  private class ThreeDistributionController(betaPC: Double, distL: Long => IntegerDistribution)
+  private class ThreeDistributionController(betaP: Double, betaC: Double, distL: Long => IntegerDistribution)
     extends ParameterControllerCreator {
     override def apply(nChanges: Long): ParameterController = new ParameterController {
       private val nSqrt = math.sqrt(nChanges.toDouble)
-      private val powerLawPC = PowerLawDistribution(nSqrt.toInt, betaPC)
+      private val powerLawP = PowerLawDistribution(nSqrt.toInt, betaP)
+      private val powerLawC = PowerLawDistribution(nSqrt.toInt, betaC)
       private val powerLawLambda = distL(nChanges)
 
       override def getParameters(rng: ThreadLocalRandom): IterationParameters = {
         val lambda = powerLawLambda.sample(rng)
-        val mutantDistance = BinomialDistribution.standard(nChanges, powerLawPC.sample(rng) / nSqrt).sample(rng)
+        val mutantDistance = BinomialDistribution.standard(nChanges, powerLawP.sample(rng) / nSqrt).sample(rng)
         IterationParameters(
           firstPopulationSize = lambda,
           secondPopulationSize = lambda,
           numberOfChangesInEachMutant = mutantDistance,
           numberOfChangesInCrossoverOffspring =
-            BinomialDistribution.standard(mutantDistance, powerLawPC.sample(rng) / nSqrt)
+            BinomialDistribution.standard(mutantDistance, powerLawC.sample(rng) / nSqrt)
         )
       }
 
