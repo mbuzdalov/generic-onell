@@ -110,7 +110,7 @@ object RunningTimes extends Main.Module {
     private[this] val jsonSeparator = "\n,"
     private[this] val jsonSuffix = "\n]\n"
 
-    def run(fun: (Executor, Int) => Any): Unit = {
+    def run(fun: (Executor[String], Int) => Any): Unit = {
       Using.resource(new PrintWriter(outName)) { moreOut =>
         Using.resource(makeScheduler(moreOut)) { scheduler =>
           val multiplexer = new Multiplexer(scheduler, nRuns)
@@ -121,7 +121,7 @@ object RunningTimes extends Main.Module {
       }
     }
 
-    private def makeScheduler(moreOut: PrintWriter): Executor = if (nThreads == 1) {
+    private def makeScheduler(moreOut: PrintWriter): Executor[String] = if (nThreads == 1) {
       new SequentialExecutor(moreOut, jsonPrefix, jsonSeparator, jsonSuffix)
     } else {
       new ParallelExecutor(moreOut, jsonPrefix, jsonSeparator, jsonSuffix, nThreads)

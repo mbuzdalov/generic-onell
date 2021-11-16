@@ -3,7 +3,7 @@ package ru.ifmo.onell.util.par
 import java.io.PrintWriter
 import java.util.concurrent.{Executors, TimeUnit}
 
-class ParallelExecutor(pw: PrintWriter, prefix: String, sep: String, suffix: String, nThreads: Int) extends Executor {
+class ParallelExecutor(pw: PrintWriter, prefix: String, sep: String, suffix: String, nThreads: Int) extends Executor[String] {
   private[this] val lock = new AnyRef
   private[this] var isFirst = true
   private[this] val nCPUs = if (nThreads >= 1) nThreads else Runtime.getRuntime.availableProcessors()

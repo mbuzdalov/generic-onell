@@ -12,7 +12,7 @@ object Main {
     def moduleMain(args: Array[String]): Unit
   }
 
-  private val modules = Seq(Help, RunningTimes, FixedBudget, FixedTarget, IRaceClient, LambdaColorMap, LambdaTraces)
+  private val modules = Seq(Help, RunningTimes, FixedBudget, FixedTarget, FixedTargetLambda, IRaceClient, LambdaColorMap, LambdaTraces)
 
   private def printCommandList(stream: PrintStream, prefix: String): Unit = {
     val moduleNameWidth = modules.view.map(_.name.length).max
