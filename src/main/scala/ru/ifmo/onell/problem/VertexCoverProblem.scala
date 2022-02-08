@@ -55,10 +55,10 @@ class VertexCoverProblem(val nVertices: Int, edges: Seq[(Int, Int)], val optimum
 object VertexCoverProblem {
   def makePSProblem(k: Int): VertexCoverProblem = {
     val edges = IndexedSeq.newBuilder[(Int, Int)]
+    val offset = 2 * (k + 2)
     for (i <- 0 until k + 2) {
       val single = i
       val hub = i + (k + 2)
-      val offset = 2 * (k + 2)
       for (j <- 0 until k) {
         edges += (hub -> (offset + j))
       }
