@@ -519,9 +519,11 @@ object RunningTimes extends Main.Module {
   private def vertexCoverPSSimple(context: Context): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
+      "(1+1) FEA~pow(1.1)" -> OnePlusOneEA.heavyDirect(1.1),
       "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=n/4" -> createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.1)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)" -> new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)),
     )
 
     context.run { (scheduler, nn) =>
