@@ -67,6 +67,12 @@ object VertexCoverProblem {
     new VertexCoverProblem(3 * k + 4, edges.result(), k + 2)
   }
 
+  def makeBipartiteGraph(a: Int, b: Int): VertexCoverProblem = {
+    new VertexCoverProblem(a + b,
+                           for (i <- 0 until a; j <- 0 until b) yield (i, a + j),
+                           math.min(a, b))
+  }
+
   class Individual(nVertices: Int, nEdges: Int) {
     private[this] val selected = new Array[Boolean](nVertices)
     private[this] var nSelectedVertices, nCoveredEdges: Int = 0
