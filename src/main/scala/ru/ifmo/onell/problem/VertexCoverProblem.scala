@@ -4,6 +4,9 @@ import java.util.concurrent.ThreadLocalRandom
 
 import scala.annotation.tailrec
 
+import org.jgrapht.alg.vertexcover.RecursiveExactVCImpl
+import org.jgrapht.graph.DefaultUndirectedGraph
+
 import ru.ifmo.onell.problem.VertexCoverProblem.Individual
 import ru.ifmo.onell.util.OrderedSet
 import ru.ifmo.onell.{Fitness, HasIndividualOperations}
@@ -55,16 +58,39 @@ class VertexCoverProblem(val nVertices: Int, edges: Seq[(Int, Int)], val optimum
 object VertexCoverProblem {
   def makePSProblem(k: Int): VertexCoverProblem = {
     val edges = IndexedSeq.newBuilder[(Int, Int)]
+    val offset = 2 * (k + 2)
     for (i <- 0 until k + 2) {
       val single = i
       val hub = i + (k + 2)
-      val offset = 2 * (k + 2)
       for (j <- 0 until k) {
         edges += (hub -> (offset + j))
       }
       edges += single -> hub
     }
     new VertexCoverProblem(3 * k + 4, edges.result(), k + 2)
+  }
+
+  def makeBipartiteGraph(a: Int, b: Int): VertexCoverProblem = {
+    new VertexCoverProblem(a + b,
+                           for (i <- 0 until a; j <- 0 until b) yield (i, a + j),
+                           math.min(a, b))
+  }
+
+  def makeRandom(v: Int, e: Int, seed: Long): VertexCoverProblem = {
+    val rng = new java.util.Random(seed)
+    val edges = IndexedSeq.newBuilder[(Int, Int)]
+    val graph = new DefaultUndirectedGraph[Int, (Int, Int)](classOf[(Int, Int)])
+    for (i <- 0 until v) {
+      graph.addVertex(i)
+    }
+    while (edges.knownSize < e) {
+      val a, b = rng.nextInt(v)
+      if (a != b) {
+        edges += (a -> b)
+        graph.addEdge(a, b, a -> b)
+      }
+    }
+    new VertexCoverProblem(v, edges.result(), new RecursiveExactVCImpl(graph).getVertexCover.size())
   }
 
   class Individual(nVertices: Int, nEdges: Int) {

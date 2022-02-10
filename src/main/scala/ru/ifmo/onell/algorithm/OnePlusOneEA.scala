@@ -7,7 +7,7 @@ import scala.{specialized => sp}
 
 import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
 import ru.ifmo.onell._
-import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution}
+import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
 
 /**
   * This is the companion class to `OnePlusOneEA` containing several variations of the (1+1) EA
@@ -39,6 +39,20 @@ object OnePlusOneEA {
     * From the literature, this flavour is known as "resampling mutation".
     */
   final val Resampling = new OnePlusOneEA(n => BinomialDistribution.resampling(n, 1.0 / n))
+
+  /**
+    * This is the (1+1) EA which flips the number of bits sampled from the power-law distribution
+    * with the given parameter beta.
+    *
+    * This algorithm is different from the "classic" fast (1+1) EA in that it does not delegate
+    * the bit sampling work to the binomial distribution with the first parameter sampled from the binomial one.
+    * What is more, the raw power-law distribution never returns 0, so we don't need to shift or resample
+    * zero-bit flips in order to be efficient.
+    *
+    * @param beta the parameter to control the power-law distribution. Good to be in (1;3).
+    * @return the (1+1) EA directly using the power-law distribution with the given beta.
+    */
+  def heavyDirect(beta: Double) = new OnePlusOneEA(n => PowerLawDistribution(n, beta))
 }
 
 /**

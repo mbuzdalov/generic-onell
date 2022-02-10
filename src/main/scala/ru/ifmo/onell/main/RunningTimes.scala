@@ -55,7 +55,11 @@ object RunningTimes extends Main.Module {
     "  bits:lni:lambda <context>: same for linear functions with random integer weights from [1;n]",
     "  bits:sat:lambda <context>: same for the MAX-SAT problem with logarithmic density",
     "  bits:mst-tree   <context>: same for the minimum spanning tree problem with individuals encoding E=V-1 graphs",
-    "  bits:vcp        <context>: same for the vertex cover problem (here, --from and --to control actual vertex numbers)",
+    "  bits:vcp:ps     <context>: same for the vertex cover problem PS (here, --from and --to control actual vertex numbers)",
+    "  bits:vcp:bip    <context>: same for the vertex cover problem on a bipartite graph (here, --from and --to control actual vertex numbers)",
+    "  bits:vcp:rnd    <context> <nInstances>: same for the vertex cover problem on random graphs",
+    "                                          with nInstance instance of each size",
+    "                                          (here, --from and --to control actual vertex numbers)",
     "  bits:jump:3d    <context>: same for Jump and independent parameter sampling from three distributions",
     "                             (--from and --to control problem size directly)",
     "The following commands run experiments for problems on permutations:",
@@ -85,7 +89,9 @@ object RunningTimes extends Main.Module {
     case "bits:sat:cap"    => bitsMaxSATCapping(parseContext(args))
     case "bits:sat:sqrt"   => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
     case "bits:sat:log"    => bitsMaxSATAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
-    case "bits:vcp"        => vertexCoverPSSimple(parseContext(args))
+    case "bits:vcp:ps"     => vertexCoverPSSimple(parseContext(args))
+    case "bits:vcp:bip"    => vertexCoverBipartiteSimple(parseContext(args))
+    case "bits:vcp:rnd"    => vertexCoverRandomSimple(parseContext(args), args.getOption("--instances").toInt)
     case "bits:mst-tree"   => treeOnlyMST(parseContext(args))
     case "bits:jump:3d"    => threeDistributionsJump(parseContext(args))
     case "perm:om"         => permOneMaxSimple(parseContext(args))
@@ -519,15 +525,69 @@ object RunningTimes extends Main.Module {
   private def vertexCoverPSSimple(context: Context): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
+      "(1+1) FEA~pow(1.1)" -> OnePlusOneEA.heavyDirect(1.1),
       "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ~pow(2.5)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'D'),
-      "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=n/4" -> createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.1)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)" -> new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)),
     )
 
     context.run { (scheduler, nn) =>
       val k = Integer.numberOfTrailingZeros(nn)
       val vcp = VertexCoverProblem.makePSProblem(k)
       for ((name, alg) <- algorithms) {
+        scheduler addTask {
+          implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
+          val t0 = System.nanoTime()
+          val time = alg.optimize(vcp)
+          val consumed = (System.nanoTime() - t0) * 1e-9
+          s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
+        }
+      }
+    }
+  }
+
+  private def vertexCoverRandomSimple(context: Context, nInstances: Int): Unit = {
+    val algorithms = Seq(
+      "(1+1) EA" -> OnePlusOneEA.Resampling,
+      "(1+1) FEA~pow(1.1)" -> OnePlusOneEA.heavyDirect(1.1),
+      "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ<=n/4" -> createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(2.1)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)" -> new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)),
+    )
+
+    context.run { (scheduler, nn) =>
+      val k = Integer.numberOfTrailingZeros(nn)
+      val vcpInstances = (0 until nInstances).map(i => (i, VertexCoverProblem.makeRandom(k, math.min(k * (k - 1) / 2, 5 * k), 3 + 7724644346661L * i + 888373 * k)))
+      for ((name, alg) <- algorithms) {
+        for ((idx, vcp) <- vcpInstances) {
+          scheduler addTask {
+            implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
+            val t0 = System.nanoTime()
+            val time = alg.optimize(vcp)
+            val consumed = (System.nanoTime() - t0) * 1e-9
+            s"""{"n":${vcp.nVertices},"instance":$idx,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
+          }
+        }
+      }
+    }
+  }
+
+  private def vertexCoverBipartiteSimple(context: Context): Unit = {
+    val algorithms = Seq(
+      ("(1+1) EA", 4, OnePlusOneEA.Resampling),
+      ("(1+1) FEA~pow(1.1)", 30, OnePlusOneEA.heavyDirect(1.1)),
+      ("(1+(λ,λ)) GA, λ<=2ln n", 8, createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D')),
+      ("(1+(λ,λ)) GA, λ<=n/4", 6, createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D')),
+      ("(1+(λ,λ)) GA, λ~pow(2.1)", 30, createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D')),
+      ("(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)", 30, new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)))
+    )
+
+    context.run { (scheduler, nn) =>
+      val k = Integer.numberOfTrailingZeros(nn)
+      val vcp = VertexCoverProblem.makeBipartiteGraph(k, k + 1)
+      for ((name, limit, alg) <- algorithms if k <= limit) {
         scheduler addTask {
           implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
           val t0 = System.nanoTime()
