@@ -6,7 +6,7 @@ lazy val commonSettings = Seq(
   fork := true
 )
 
-lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.11" % Test
+lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.8" % Test
 lazy val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.12.3"
 
 lazy val root = project
