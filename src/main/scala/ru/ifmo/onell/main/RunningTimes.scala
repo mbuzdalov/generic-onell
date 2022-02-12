@@ -576,10 +576,10 @@ object RunningTimes extends Main.Module {
 
   private def vertexCoverBipartiteSimple(context: Context): Unit = {
     val algorithms = Seq(
-      ("(1+1) EA", 4, OnePlusOneEA.Resampling),
+      ("(1+1) EA", 5, OnePlusOneEA.Resampling),
       ("(1+1) FEA~pow(1.1)", 30, OnePlusOneEA.heavyDirect(1.1)),
-      ("(1+(λ,λ)) GA, λ<=2ln n", 8, createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D')),
-      ("(1+(λ,λ)) GA, λ<=n/4", 6, createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D')),
+      ("(1+(λ,λ)) GA, λ<=2ln n", 9, createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D')),
+      ("(1+(λ,λ)) GA, λ<=n/4", 7, createOnePlusLambdaLambdaGA(oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _ / 4.0), 'R', "RL", 'C', 'D')),
       ("(1+(λ,λ)) GA, λ~pow(2.1)", 30, createOnePlusLambdaLambdaGA(powerLawLambda(2.1), 'R', "RL", 'C', 'D')),
       ("(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)", 30, new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)))
     )
