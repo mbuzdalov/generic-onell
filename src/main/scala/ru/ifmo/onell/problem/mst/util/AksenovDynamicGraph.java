@@ -139,22 +139,22 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public static Node[] split(Node v, int size) {
+    public static void split(Node v, int size, Node[] answer) {
         if (v == null) {
-            return new Node[]{null, null};
-        }
-        if (getSizeNode(v.l) >= size) {
-            Node[] ns = split(v.l, size);
-            v.l = ns[1];
+            answer[0] = null;
+            answer[1] = null;
+        } else if (getSizeNode(v.l) >= size) {
+            split(v.l, size, answer);
+            v.l = answer[1];
             v.update();
             v.p = null;
-            return new Node[]{ns[0], v};
+            answer[1] = v;
         } else {
-            Node[] ns = split(v.r, size - getSizeNode(v.l) - 1);
-            v.r = ns[0];
+            split(v.r, size - getSizeNode(v.l) - 1, answer);
+            v.r = answer[0];
             v.update();
             v.p = null;
-            return new Node[]{v, ns[1]};
+            answer[0] = v;
         }
     }
 
@@ -180,6 +180,7 @@ public final class AksenovDynamicGraph {
         int level;
         Node[] vertexNode;
         HashMap<Edge, Node> nodeByEdge;
+        Node[] splitTemp = new Node[2];
 
         public Forest(int n, int level) {
             this.level = level;
@@ -200,8 +201,8 @@ public final class AksenovDynamicGraph {
         public void makeFirst(Node v) {
             Node head = getRoot(v);
             int pos = getPosition(v);
-            Node[] ns = split(head, pos);
-            merge(ns[1], ns[0]);
+            split(head, pos, splitTemp);
+            merge(splitTemp[1], splitTemp[0]);
         }
 
         public void link(int u, int v) {
@@ -247,13 +248,14 @@ public final class AksenovDynamicGraph {
             }
             Node head = getRoot(vertexNode[u]);
 
-            Node[] t1 = split(head, pos2 + 1);
-            Node[] t2 = split(t1[0], pos2);
-            assert t2[1] == c1 || t2[1] == c2;
-            Node[] t3 = split(t2[0], pos1 + 1);
-            Node[] t4 = split(t3[0], pos1);
-            assert t4[1] == c1 || t4[1] == c2;
-            merge(t4[0], t1[1]);
+            split(head, pos2 + 1, splitTemp);
+            Node t11 = splitTemp[1];
+            split(splitTemp[0], pos2, splitTemp);
+            assert splitTemp[1] == c1 || splitTemp[1] == c2;
+            split(splitTemp[0], pos1 + 1, splitTemp);
+            split(splitTemp[0], pos1, splitTemp);
+            assert splitTemp[1] == c1 || splitTemp[1] == c2;
+            merge(splitTemp[0], t11);
         }
 
         public int getComponentSize(int v) {
