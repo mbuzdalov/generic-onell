@@ -103,7 +103,7 @@ public final class AksenovDynamicGraph {
                 me += id;
             }
 
-            return "[" + (l == null ? "" : l.toString() + ",") + me + (r == null ? "" : "," + r.toString()) + "]";
+            return "[" + (l == null ? "" : l + ",") + me + (r == null ? "" : "," + r) + "]";
         }
     }
 
@@ -333,12 +333,12 @@ public final class AksenovDynamicGraph {
     HashSet<Integer> edgeTaken; // is the edge was taken into consideration previously
     int curEdge;
 
-    int connected_components;
+    int connectedComponents;
 
     public AksenovDynamicGraph(int n) {
         N = n;
 
-        connected_components = n;
+        connectedComponents = n;
         int p = 1;
         int k = 1;
         while (p <= n) {
@@ -364,7 +364,7 @@ public final class AksenovDynamicGraph {
     }
 
     public void clear() {
-        connected_components = N;
+        connectedComponents = N;
 
         for (int i = 0; i < forest.length; i++) {
             forest[i] = new Forest(N, i);
@@ -383,7 +383,7 @@ public final class AksenovDynamicGraph {
     }
 
     public int numberOfCC() {
-        return connected_components;
+        return connectedComponents;
     }
 
     public boolean isConnected(int u, int v) {
@@ -406,7 +406,7 @@ public final class AksenovDynamicGraph {
 
         if (!forest[0].isConnected(u, v)) { // If this is a spanning tree
             forest[0].link(u, v); // link two forest trees together
-            connected_components--;
+            connectedComponents--;
         } else {
             adjacent[u][0].add(curEdge); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
             adjacent[v][0].add(curEdge);
@@ -518,7 +518,7 @@ public final class AksenovDynamicGraph {
         }
 
         if (!replaced) {
-            connected_components++;
+            connectedComponents++;
         }
 
         edgeIndex.remove(e);
