@@ -51,11 +51,11 @@ public final class AksenovDynamicGraph {
 
     public class Node {
         Node l, r, p;
-        int y;
+        final int y;
         int size;
-        NodeType type;
-        int id;
-        int level;
+        final NodeType type;
+        final int id;
+        final int level;
         boolean hasVertex;
         boolean hasEdge;
 
@@ -421,7 +421,7 @@ public final class AksenovDynamicGraph {
         return true;
     }
 
-    public void increaseLevel(int x, boolean spanning) {
+    private void increaseLevel(int x, boolean spanning) {
         Edge edge = edges.get(x);
         int u = edge.u;
         int v = edge.v;
