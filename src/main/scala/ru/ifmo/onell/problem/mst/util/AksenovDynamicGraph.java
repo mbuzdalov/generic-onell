@@ -1,9 +1,6 @@
 package ru.ifmo.onell.problem.mst.util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Implementation of dynamic connectivity based on a hierarchy of partial forests.
@@ -17,7 +14,7 @@ public final class AksenovDynamicGraph {
 
     private final Random rnd = new Random(239);
 
-    public static class Edge {
+    private static class Edge {
         int u, v, level;
 
         public Edge(int u, int v) {
@@ -44,12 +41,12 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public enum NodeType {
+    private enum NodeType {
         VERTEX,
         EDGE
     }
 
-    public class Node {
+    private class Node {
         Node l, r, p;
         final int y;
         int size;
@@ -107,19 +104,19 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public static int getSizeNode(Node node) {
+    private static int getSizeNode(Node node) {
         return node == null ? 0 : node.size;
     }
 
-    public static boolean getHasVertexNode(Node node) {
+    private static boolean getHasVertexNode(Node node) {
         return node != null && node.hasVertex;
     }
 
-    public static boolean getHasEdgeNode(Node node) {
+    private static boolean getHasEdgeNode(Node node) {
         return node != null && node.hasEdge;
     }
 
-    public static Node merge(Node l, Node r) {
+    private static Node merge(Node l, Node r) {
         assert l != r;
 
         if (l == null) {
@@ -139,7 +136,7 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public static void split(Node v, int size, Node[] answer) {
+    private static void split(Node v, int size, Node[] answer) {
         if (v == null) {
             answer[0] = null;
             answer[1] = null;
@@ -158,14 +155,14 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public static Node getRoot(Node v) {
+    private static Node getRoot(Node v) {
         while (v.p != null) {
             v = v.p;
         }
         return v;
     }
 
-    public static int getPosition(Node v) {
+    private static int getPosition(Node v) {
         int sum = getSizeNode(v.l);
         while (v.p != null) {
             if (v.p.r == v) {
@@ -176,7 +173,7 @@ public final class AksenovDynamicGraph {
         return sum;
     }
 
-    public class Forest {
+    private class Forest {
         int level;
         Node[] vertexNode;
         HashMap<Edge, Node> nodeByEdge;
@@ -262,11 +259,11 @@ public final class AksenovDynamicGraph {
             return getRoot(vertexNode[v]).size;
         }
 
-        ArrayList<Integer> spanningEdges;
+        private final List<Integer> spanningEdges = new ArrayList<>();
 
         public void prepareSpanningEdges() {
-            spanningEdges = new ArrayList<>();
-            edgeTaken = new HashSet<>();
+            spanningEdges.clear();
+            edgeTaken.clear();
         }
 
         public void getSpanningEdges(Node root) {
@@ -286,11 +283,11 @@ public final class AksenovDynamicGraph {
             getSpanningEdges(root.r);
         }
 
-        ArrayList<Integer> allEdges;
+        private final List<Integer> allEdges = new ArrayList<>();
 
         public void prepareAllEdges() {
-            allEdges = new ArrayList<>();
-            edgeTaken = new HashSet<>();
+            allEdges.clear();
+            edgeTaken.clear();
         }
 
         public int getAllEdges(Node root) {
@@ -327,15 +324,15 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    int N;
-    Forest[] forest;
-    HashSet<Integer>[][] adjacent;
-    HashMap<Integer, Edge> edges; // Edge by id
-    HashMap<Edge, Integer> edgeIndex; // id by edge
-    HashSet<Integer> edgeTaken; // is the edge was taken into consideration previously
-    int curEdge;
+    private final int N;
+    private final Forest[] forest;
+    private final HashSet<Integer>[][] adjacent;
+    private final HashMap<Integer, Edge> edges; // Edge by id
+    private final HashMap<Edge, Integer> edgeIndex; // id by edge
+    private final HashSet<Integer> edgeTaken; // is the edge was taken into consideration previously
+    private int curEdge;
 
-    int connectedComponents;
+    private int connectedComponents;
 
     public AksenovDynamicGraph(int n) {
         N = n;
@@ -363,6 +360,7 @@ public final class AksenovDynamicGraph {
 
         edgeIndex = new HashMap<>();
         edges = new HashMap<>();
+        edgeTaken = new HashSet<>();
     }
 
     public void clear() {
@@ -380,6 +378,7 @@ public final class AksenovDynamicGraph {
 
         edgeIndex.clear();
         edges.clear();
+        edgeTaken.clear();
 
         curEdge = 0;
     }
