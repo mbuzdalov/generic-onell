@@ -96,11 +96,11 @@ public final class AksenovDynamicGraph {
         }
 
         public String toString() {
-            String me = "";
+            String me;
             if (type == NodeType.EDGE) {
-                me += edges.get(id).u + "->" + edges.get(id).v;
+                me = edges.get(id).u + "->" + edges.get(id).v;
             } else {
-                me += id;
+                me = String.valueOf(id);
             }
 
             return "[" + (l == null ? "" : l + ",") + me + (r == null ? "" : "," + r) + "]";
@@ -466,8 +466,8 @@ public final class AksenovDynamicGraph {
 
         int rank = e.level;
 
-        if (!forest[0].nodeByEdge.containsKey(e)) { // The edges is not in the spanning tree
-            adjacent[u][rank].remove(id); // simply remove from the adjacency list on level level
+        if (!forest[0].nodeByEdge.containsKey(e)) { // The edge is not in the spanning tree
+            adjacent[u][rank].remove(id); // simply remove from the adjacency list on level `level`
             adjacent[v][rank].remove(id);
 
             forest[rank].updateToTop(forest[rank].vertexNode[u]);
