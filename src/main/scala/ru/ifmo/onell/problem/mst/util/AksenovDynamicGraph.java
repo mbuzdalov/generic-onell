@@ -62,24 +62,22 @@ public final class AksenovDynamicGraph {
             update();
         }
 
-        public Node cutLeft() {
+        public void cutLeft() {
             if (l == null) {
-                return null;
+                return;
             }
             Node result = l;
             l = null;
             result.p = null;
-            return result;
         }
 
-        public Node cutRight() {
+        public void cutRight() {
             if (r == null) {
-                return null;
+                return;
             }
             Node result = r;
             r = null;
             result.p = null;
-            return result;
         }
 
         public void setLeft(Node node) {
@@ -145,16 +143,22 @@ public final class AksenovDynamicGraph {
             if ((g = p.p) == null) {
                 // Zig
                 if (p.l == x) {
-                    p.cutLeft();
-                    Node xr = x.cutRight();
-                    p.setLeft(xr);
-                    x.setRight(p);
+                    Node xr = x.r;
+                    p.l = xr;
+                    if (xr != null) {
+                        xr.p = p;
+                    }
+                    x.r = p;
                 } else {
-                    p.cutRight();
-                    Node xl = x.cutLeft();
-                    p.setRight(xl);
-                    x.setLeft(p);
+                    Node xl = x.l;
+                    p.r = xl;
+                    if (xl != null) {
+                        xl.p = p;
+                    }
+                    x.l = p;
                 }
+                x.p = null;
+                p.p = x;
                 p.update();
                 x.update();
             } else {
@@ -185,11 +189,14 @@ public final class AksenovDynamicGraph {
                         g.p = p;
                     } else {
                         // Zig-zag
-                        g.r = null;
                         p.p = null;
-                        Node xl = x.cutLeft();
-                        g.setRight(xl);
-                        x.setLeft(g);
+                        Node xl = x.l;
+                        g.r = xl;
+                        if (xl != null) {
+                            xl.p = g;
+                        }
+                        x.l = g;
+                        g.p = x;
                     }
                     p.l = xr;
                     if (xr != null) {
@@ -214,11 +221,14 @@ public final class AksenovDynamicGraph {
                         g.p = p;
                     } else {
                         // Zig-zag
-                        g.l = null;
                         p.p = null;
-                        Node xr = x.cutRight();
-                        g.setLeft(xr);
-                        x.setRight(g);
+                        Node xr = x.r;
+                        g.l = xr;
+                        if (xr != null) {
+                            xr.p = g;
+                        }
+                        x.r = g;
+                        g.p = x;
                     }
                     p.r = xl;
                     if (xl != null) {
