@@ -14,13 +14,13 @@ public final class AksenovDynamicGraph {
     private static final boolean CRAZY_ASSERTIONS = false;
 
     private static class Edge {
-        int u, v, level;
+        final int u, v;
+        int level, dfsCounter;
 
         public Edge(int u, int v) {
             assert u != v;
             this.u = u;
             this.v = v;
-            level = 0;
         }
 
         public int hashCode() {
@@ -255,36 +255,28 @@ public final class AksenovDynamicGraph {
             return getRoot(vertexNode[v]).size;
         }
 
-        private final List<Edge> spanningEdges = new ArrayList<>();
-
-        public void prepareSpanningEdges() {
-            spanningEdges.clear();
-            edgeTaken.clear();
-        }
-
-        public void getSpanningEdges(Node root) {
-            if (root == null) {
-                return;
-            }
-            if (!root.hasEdgeInSubtree) {
+        public void increaseLevelOnSpanningEdges(Node root) {
+            if (root == null || !root.hasEdgeInSubtree) {
                 return;
             }
             Edge e = root.getAssociatedEdge();
             if (e != null) {
-                if (!edgeTaken.contains(e)) { // It could be put 2 times, direct or inverse
-                    edgeTaken.add(e);
-                    spanningEdges.add(e);
+                if (e.dfsCounter == 0) {
+                    increaseLevel(e, true);
                 }
+                ++e.dfsCounter;
             }
-            getSpanningEdges(root.l);
-            getSpanningEdges(root.r);
+            increaseLevelOnSpanningEdges(root.l);
+            increaseLevelOnSpanningEdges(root.r);
+            if (e != null) {
+                --e.dfsCounter;
+            }
         }
 
         private final List<Edge> allEdges = new ArrayList<>();
 
         public void prepareAllEdges() {
             allEdges.clear();
-            edgeTaken.clear();
         }
 
         public Edge getAllEdges(Node root) {
@@ -296,8 +288,8 @@ public final class AksenovDynamicGraph {
             }
             for (Edge e : root.getEdgesAdjacentToVertex()) {
                 if (isConnected(e.u, e.v)) {
-                    if (!edgeTaken.contains(e)) {
-                        edgeTaken.add(e);
+                    if (e.dfsCounter == 0) {
+                        ++e.dfsCounter;
                         allEdges.add(e);
                     }
                 } else {
@@ -320,8 +312,6 @@ public final class AksenovDynamicGraph {
 
     private final int N;
     private final Forest[] forest;
-    private final HashSet<Edge> edgeTaken; // is the edge was taken into consideration previously
-
     private int connectedComponents;
     private final Edge[] mirrorEdges;
 
@@ -342,8 +332,6 @@ public final class AksenovDynamicGraph {
         for (int i = 0; i < k; i++) {
             forest[i] = new Forest(n, i);
         }
-
-        edgeTaken = new HashSet<>();
     }
 
     public void clear() {
@@ -353,8 +341,6 @@ public final class AksenovDynamicGraph {
         for (int i = 0; i < forest.length; i++) {
             forest[i] = new Forest(N, i);
         }
-
-        edgeTaken.clear();
     }
 
     public int numberOfCC() {
@@ -378,15 +364,15 @@ public final class AksenovDynamicGraph {
         mirrorEdges[id] = e;
         Forest f0 = forest[0];
 
-        if (!f0.isConnected(u, v)) { // If this is a spanning tree
-            f0.link(e); // link two forest trees together
-            connectedComponents--;
-        } else {
+        if (isConnected(u, v)) {
             f0.adjacent[u].add(e); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
             f0.adjacent[v].add(e);
 
             updateToTop(f0.vertexNode[u]);
             updateToTop(f0.vertexNode[v]);
+        } else {
+            f0.link(e); // link two forest trees together
+            connectedComponents--;
         }
 
         assert checkState();
@@ -455,17 +441,13 @@ public final class AksenovDynamicGraph {
             Forest fCurr = this.forest[level];
             int w = (fCurr.getComponentSize(u) > fCurr.getComponentSize(v)) ? v : u; // Choose the smallest component
 
-            fCurr.prepareSpanningEdges();
-            fCurr.getSpanningEdges(getRoot(fCurr.vertexNode[w]));
-            for (Edge x : fCurr.spanningEdges) {
-                assert !forest[level + 1].isConnected(u, v);
-                increaseLevel(x, true);
-            }
+            fCurr.increaseLevelOnSpanningEdges(getRoot((fCurr.vertexNode[w])));
 
             fCurr.prepareAllEdges();
             Edge good = fCurr.getAllEdges(getRoot(fCurr.vertexNode[w]));
             for (Edge x : fCurr.allEdges) {
                 increaseLevel(x, false);
+                x.dfsCounter = 0;
             }
 
             if (good != null) { // We found good edge
