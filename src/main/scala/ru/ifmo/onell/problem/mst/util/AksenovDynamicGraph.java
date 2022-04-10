@@ -329,6 +329,24 @@ public final class AksenovDynamicGraph {
             Node r2 = getRoot(vertexNode[v]);
             return r1 == r2;
         }
+
+        public void addNonSpanningEdge(Edge e) {
+            int u = e.u;
+            int v = e.v;
+            adjacent[u].add(e);
+            adjacent[v].add(e);
+            updateToTop(vertexNode[u]);
+            updateToTop(vertexNode[v]);
+        }
+
+        public void removeNonSpanningEdge(Edge e) {
+            int u = e.u;
+            int v = e.v;
+            adjacent[u].remove(e);
+            adjacent[v].remove(e);
+            updateToTop(vertexNode[u]);
+            updateToTop(vertexNode[v]);
+        }
     }
 
     private final int N;
@@ -386,11 +404,7 @@ public final class AksenovDynamicGraph {
         Forest f0 = forest[0];
 
         if (isConnected(u, v)) {
-            f0.adjacent[u].add(e); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
-            f0.adjacent[v].add(e);
-
-            updateToTop(f0.vertexNode[u]);
-            updateToTop(f0.vertexNode[v]);
+            f0.addNonSpanningEdge(e);
         } else {
             f0.link(e); // link two forest trees together
             connectedComponents--;
@@ -413,15 +427,8 @@ public final class AksenovDynamicGraph {
             updateToTop(p.b);
             fNext.link(edge);
         } else {
-            fCurr.adjacent[u].remove(edge);
-            updateToTop(fCurr.vertexNode[u]);
-            fCurr.adjacent[v].remove(edge);
-            updateToTop(fCurr.vertexNode[v]);
-
-            fNext.adjacent[u].add(edge);
-            updateToTop(fNext.vertexNode[u]);
-            fNext.adjacent[v].add(edge);
-            updateToTop(fNext.vertexNode[v]);
+            fCurr.removeNonSpanningEdge(edge);
+            fNext.addNonSpanningEdge(edge);
 
             assert fNext.isConnected(u, v);
         }
@@ -443,11 +450,7 @@ public final class AksenovDynamicGraph {
 
         if (!forest[0].nodeByEdge.containsKey(e)) { // The edge is not in the spanning tree
             Forest fr = forest[rank];
-            fr.adjacent[u].remove(e); // simply remove from the adjacency list on level `level`
-            fr.adjacent[v].remove(e);
-
-            updateToTop(fr.vertexNode[u]);
-            updateToTop(fr.vertexNode[v]);
+            fr.removeNonSpanningEdge(e);
             return true;
         }
 
@@ -472,10 +475,7 @@ public final class AksenovDynamicGraph {
             }
 
             if (good != null) { // We found good edge
-                fCurr.adjacent[good.u].remove(good);
-                fCurr.adjacent[good.v].remove(good);
-                updateToTop(fCurr.vertexNode[good.u]);
-                updateToTop(fCurr.vertexNode[good.v]);
+                fCurr.removeNonSpanningEdge(good);
 
                 for (int i = level; i >= 0; i--) {
                     forest[i].link(good);
