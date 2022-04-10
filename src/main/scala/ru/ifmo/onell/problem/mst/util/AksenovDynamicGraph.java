@@ -62,33 +62,6 @@ public final class AksenovDynamicGraph {
             update();
         }
 
-        public void cutLeft() {
-            if (l == null) {
-                return;
-            }
-            Node result = l;
-            l = null;
-            result.p = null;
-        }
-
-        public void cutRight() {
-            if (r == null) {
-                return;
-            }
-            Node result = r;
-            r = null;
-            result.p = null;
-        }
-
-        public void setRight(Node node) {
-            assert r == null;
-            if (node != null) {
-                assert node.p == null;
-                node.p = this;
-                this.r = node;
-            }
-        }
-
         public void update() {
             hasVertexInSubtree = !getEdgesAdjacentToVertex().isEmpty();
             hasEdgeInSubtree = getAssociatedEdge() != null;
@@ -242,8 +215,8 @@ public final class AksenovDynamicGraph {
             l = l.r;
         }
         splay(l);
-        assert l.r == null;
-        l.setRight(r);
+        l.r = r;
+        r.p = l;
         l.update();
         return l;
     }
@@ -285,7 +258,8 @@ public final class AksenovDynamicGraph {
             splay(v);
             Node l = v.l;
             if (l != null) {
-                v.cutLeft();
+                v.l = null;
+                l.p = null;
                 v.update();
                 merge(v, l);
                 splay(v);
@@ -310,11 +284,17 @@ public final class AksenovDynamicGraph {
 
         public void cut(Edge e) {
             NodePair c = nodeByEdge.remove(e);
-            makeFirst(c.b);
-            c.b.cutRight();
-            splay(c.a);
-            c.a.cutLeft();
-            c.a.cutRight();
+            Node ca = c.a;
+            Node cb = c.b;
+            makeFirst(cb);
+
+            cb.r.p = null;
+            cb.r = null;
+            splay(ca);
+            ca.l.p = null;
+            ca.l = null;
+            ca.r.p = null;
+            ca.r = null;
         }
 
         public int getComponentSize(int v) {
