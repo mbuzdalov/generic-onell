@@ -61,10 +61,10 @@ public final class AksenovDynamicGraph {
             hasEdge = isHasEdge();
         }
 
-        public Node(Edge edge, int id, int level) {
+        public Node(Edge edge, int level) {
             y = rnd.nextInt();
             size = 1;
-            this.id = id;
+            this.id = -1;
             this.level = level;
             this.myEdge = edge;
             hasVertex = isHasVertex();
@@ -224,9 +224,8 @@ public final class AksenovDynamicGraph {
             Node n1 = getRoot(vertexNode[u]);
             Node n2 = getRoot(vertexNode[v]);
 
-            int edgeId = edgeIndex.get(e);
-            Node c1 = new Node(e, edgeId, level);
-            Node c2 = new Node(e, edgeId, level);
+            Node c1 = new Node(e, level);
+            Node c2 = new Node(e, level);
             nodeByEdge.put(e, new NodePair(c1, c2));
 
             merge(merge(merge(n1, c1), n2), c2);
@@ -330,7 +329,6 @@ public final class AksenovDynamicGraph {
     private final int N;
     private final Forest[] forest;
     private final HashSet<Edge>[][] adjacent;
-    private final HashMap<Edge, Integer> edgeIndex; // id by edge
     private final HashSet<Edge> edgeTaken; // is the edge was taken into consideration previously
 
     private int connectedComponents;
@@ -362,7 +360,6 @@ public final class AksenovDynamicGraph {
             forest[i] = new Forest(n, i);
         }
 
-        edgeIndex = new HashMap<>();
         edgeTaken = new HashSet<>();
     }
 
@@ -380,7 +377,6 @@ public final class AksenovDynamicGraph {
             }
         }
 
-        edgeIndex.clear();
         edgeTaken.clear();
     }
 
@@ -403,7 +399,6 @@ public final class AksenovDynamicGraph {
         }
         Edge e = new Edge(u, v);
         mirrorEdges[id] = e;
-        edgeIndex.put(e, id);
 
         if (!forest[0].isConnected(u, v)) { // If this is a spanning tree
             forest[0].link(e); // link two forest trees together
@@ -453,14 +448,10 @@ public final class AksenovDynamicGraph {
         int id = theEdge.id();
         assert u < v;
 
-        Integer tmpId = edgeIndex.get(new Edge(u, v));
-
-        if (tmpId == null) {
+        Edge e = mirrorEdges[id];
+        if (e == null) {
             return false;
         }
-        assert id == tmpId;
-
-        Edge e = mirrorEdges[id];
         mirrorEdges[id] = null;
 
         int rank = e.level;
@@ -471,8 +462,6 @@ public final class AksenovDynamicGraph {
 
             forest[rank].updateToTop(forest[rank].vertexNode[u]);
             forest[rank].updateToTop(forest[rank].vertexNode[v]);
-
-            edgeIndex.remove(e);
             return true;
         }
 
@@ -518,8 +507,6 @@ public final class AksenovDynamicGraph {
         if (!replaced) {
             connectedComponents++;
         }
-
-        edgeIndex.remove(e);
 
         assert checkState();
 
