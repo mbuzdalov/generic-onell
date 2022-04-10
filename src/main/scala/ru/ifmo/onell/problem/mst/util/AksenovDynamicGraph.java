@@ -173,10 +173,18 @@ public final class AksenovDynamicGraph {
         return sum;
     }
 
+    private static class NodePair {
+        public final Node a, b;
+        public NodePair(Node a, Node b) {
+            this.a = a;
+            this.b = b;
+        }
+    }
+
     private class Forest {
         int level;
         Node[] vertexNode;
-        HashMap<Edge, Node> nodeByEdge;
+        HashMap<Edge, NodePair> nodeByEdge;
         Node[] splitTemp = new Node[2];
 
         public Forest(int n, int level) {
@@ -217,8 +225,7 @@ public final class AksenovDynamicGraph {
             int edgeId = edgeIndex.get(new Edge(u, v));
             Node c1 = new Node(NodeType.EDGE, edgeId, level);
             Node c2 = new Node(NodeType.EDGE, edgeId, level);
-            nodeByEdge.put(new Edge(u, v), c1);
-            nodeByEdge.put(new Edge(v, u), c2);
+            nodeByEdge.put(new Edge(u, v), new NodePair(c1, c2));
 
             merge(merge(merge(n1, c1), n2), c2);
         }
@@ -227,16 +234,11 @@ public final class AksenovDynamicGraph {
             makeFirst(vertexNode[u]);
 
             Edge l = new Edge(u, v);
-            Edge r = new Edge(v, u);
-
-            Node c1 = nodeByEdge.get(l);
-            Node c2 = nodeByEdge.get(r);
-
+            NodePair c = nodeByEdge.get(l);
             nodeByEdge.remove(l);
-            nodeByEdge.remove(r);
 
-            int pos1 = getPosition(c1);
-            int pos2 = getPosition(c2);
+            int pos1 = getPosition(c.a);
+            int pos2 = getPosition(c.b);
 
             if (pos1 > pos2) {
                 int q = pos1;
@@ -248,10 +250,10 @@ public final class AksenovDynamicGraph {
             split(head, pos2 + 1, splitTemp);
             Node t11 = splitTemp[1];
             split(splitTemp[0], pos2, splitTemp);
-            assert splitTemp[1] == c1 || splitTemp[1] == c2;
+            assert splitTemp[1] == c.a || splitTemp[1] == c.b;
             split(splitTemp[0], pos1 + 1, splitTemp);
             split(splitTemp[0], pos1, splitTemp);
-            assert splitTemp[1] == c1 || splitTemp[1] == c2;
+            assert splitTemp[1] == c.a || splitTemp[1] == c.b;
             merge(splitTemp[0], t11);
         }
 
@@ -423,10 +425,11 @@ public final class AksenovDynamicGraph {
         int level = edge.level;
         edge.level++;
         if (spanning) {
-            assert forest[level].nodeByEdge.get(new Edge(u, v)) != null;
-            forest[level].updateToTop(forest[level].nodeByEdge.get(new Edge(u, v)));
-            assert forest[level].nodeByEdge.get(new Edge(v, u)) != null;
-            forest[level].updateToTop(forest[level].nodeByEdge.get(new Edge(v, u)));
+            NodePair p = forest[level].nodeByEdge.get(new Edge(u, v));
+            assert p.a != null;
+            forest[level].updateToTop(p.a);
+            assert p.b != null;
+            forest[level].updateToTop(p.b);
             forest[level + 1].link(u, v);
         } else {
             adjacent[u][level].remove(x);
