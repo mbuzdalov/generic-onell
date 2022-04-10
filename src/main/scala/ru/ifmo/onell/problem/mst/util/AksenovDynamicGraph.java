@@ -80,15 +80,6 @@ public final class AksenovDynamicGraph {
             result.p = null;
         }
 
-        public void setLeft(Node node) {
-            assert l == null;
-            if (node != null) {
-                assert node.p == null;
-                node.p = this;
-                this.l = node;
-            }
-        }
-
         public void setRight(Node node) {
             assert r == null;
             if (node != null) {
@@ -158,18 +149,14 @@ public final class AksenovDynamicGraph {
                     x.l = p;
                 }
                 x.p = null;
-                p.p = x;
-                p.update();
-                x.update();
             } else {
                 Node gg = g.p;
-                boolean isGGL = false;
                 if (gg != null) {
-                    isGGL = gg.l == g;
-                    if (isGGL) {
-                        gg.cutLeft();
+                    g.p = null;
+                    if (gg.l == g) {
+                        gg.l = x;
                     } else {
-                        gg.cutRight();
+                        gg.r = x;
                     }
                 }
                 if (p.l == x) {
@@ -203,7 +190,6 @@ public final class AksenovDynamicGraph {
                         xr.p = p;
                     }
                     x.r = p;
-                    p.p = x;
                 } else {
                     p.r = null;
                     x.p = null;
@@ -235,20 +221,13 @@ public final class AksenovDynamicGraph {
                         xl.p = p;
                     }
                     x.l = p;
-                    p.p = x;
                 }
+                x.p = gg;
                 g.update();
-                p.update();
-                x.update();
-                if (gg != null) {
-                    if (isGGL) {
-                        gg.setLeft(x);
-                    } else {
-                        gg.setRight(x);
-                    }
-                    // gg update seems unneeded
-                }
             }
+            p.p = x;
+            p.update();
+            x.update();
         }
     }
 
