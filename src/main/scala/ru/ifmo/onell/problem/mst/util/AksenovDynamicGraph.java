@@ -1,7 +1,6 @@
 package ru.ifmo.onell.problem.mst.util;
 
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Implementation of dynamic connectivity based on a hierarchy of partial forests.
@@ -42,7 +41,6 @@ public final class AksenovDynamicGraph {
 
     private static class Node {
         Node l, r, p;
-        final int y;
         int size;
         final Edge myEdge;
         final Set<Edge> myAdjacentEdges;
@@ -51,7 +49,6 @@ public final class AksenovDynamicGraph {
         boolean hasEdgeInSubtree;
 
         public Node(int id, Set<Edge> myAdjacentEdges) {
-            y = ThreadLocalRandom.current().nextInt();
             this.myAdjacentEdges = myAdjacentEdges;
             this.levelOrId = id;
             this.myEdge = null;
@@ -59,11 +56,48 @@ public final class AksenovDynamicGraph {
         }
 
         public Node(Edge edge, int level) {
-            y = ThreadLocalRandom.current().nextInt();
             this.myAdjacentEdges = Collections.emptySet();
             this.levelOrId = level;
             this.myEdge = edge;
             update();
+        }
+
+        public Node cutLeft() {
+            if (l == null) {
+                return null;
+            }
+            Node result = l;
+            l = null;
+            result.p = null;
+            return result;
+        }
+
+        public Node cutRight() {
+            if (r == null) {
+                return null;
+            }
+            Node result = r;
+            r = null;
+            result.p = null;
+            return result;
+        }
+
+        public void setLeft(Node node) {
+            assert l == null;
+            if (node != null) {
+                assert node.p == null;
+                node.p = this;
+                this.l = node;
+            }
+        }
+
+        public void setRight(Node node) {
+            assert r == null;
+            if (node != null) {
+                assert node.p == null;
+                node.p = this;
+                this.r = node;
+            }
         }
 
         public void update() {
@@ -71,13 +105,11 @@ public final class AksenovDynamicGraph {
             hasEdgeInSubtree = getAssociatedEdge() != null;
             size = 1;
             if (l != null) {
-                l.p = this;
                 hasVertexInSubtree |= l.hasVertexInSubtree;
                 hasEdgeInSubtree |= l.hasEdgeInSubtree;
                 size += l.size;
             }
             if (r != null) {
-                r.p = this;
                 hasVertexInSubtree |= r.hasVertexInSubtree;
                 hasEdgeInSubtree |= r.hasEdgeInSubtree;
                 size += r.size;
@@ -107,8 +139,100 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    private static int getSizeNode(Node node) {
-        return node == null ? 0 : node.size;
+    private static void splay(Node x) {
+        Node p, g;
+        while ((p = x.p) != null) {
+            if ((g = p.p) == null) {
+                // Zig
+                if (p.l == x) {
+                    p.cutLeft();
+                    Node xr = x.cutRight();
+                    p.setLeft(xr);
+                    p.update();
+                    x.setRight(p);
+                } else {
+                    p.cutRight();
+                    Node xl = x.cutLeft();
+                    p.setRight(xl);
+                    p.update();
+                    x.setLeft(p);
+                }
+                x.update();
+            } else {
+                Node gg = g.p;
+                boolean isGGL = false;
+                if (gg != null) {
+                    isGGL = gg.l == g;
+                    if (isGGL) {
+                        gg.cutLeft();
+                    } else {
+                        gg.cutRight();
+                    }
+                }
+                if (p.l == x) {
+                    if (g.l == p) {
+                        // Zig-zig
+                        g.cutLeft();
+                        Node pr = p.cutRight();
+                        g.setLeft(pr);
+                        g.update();
+                        p.setRight(g);
+                        Node xr = x.cutRight();
+                        p.cutLeft();
+                        p.setLeft(xr);
+                        p.update();
+                        x.setRight(p);
+                    } else {
+                        // Zig-zag
+                        g.cutRight();
+                        p.cutLeft();
+                        Node xl = x.cutLeft();
+                        Node xr = x.cutRight();
+                        g.setRight(xl);
+                        p.setLeft(xr);
+                        p.update();
+                        g.update();
+                        x.setLeft(g);
+                        x.setRight(p);
+                    }
+                } else {
+                    if (g.r == p) {
+                        // Zig-zig
+                        g.cutRight();
+                        Node pl = p.cutLeft();
+                        g.setRight(pl);
+                        g.update();
+                        p.setLeft(g);
+                        Node xl = x.cutLeft();
+                        p.cutRight();
+                        p.setRight(xl);
+                        p.update();
+                        x.setLeft(p);
+                    } else {
+                        // Zig-zag
+                        g.cutLeft();
+                        p.cutRight();
+                        Node xl = x.cutLeft();
+                        Node xr = x.cutRight();
+                        g.setLeft(xr);
+                        p.setRight(xl);
+                        p.update();
+                        g.update();
+                        x.setLeft(p);
+                        x.setRight(g);
+                    }
+                }
+                x.update();
+                if (gg != null) {
+                    if (isGGL) {
+                        gg.setLeft(x);
+                    } else {
+                        gg.setRight(x);
+                    }
+                    // gg update seems unneeded
+                }
+            }
+        }
     }
 
     private static void updateToTop(Node v) {
@@ -127,34 +251,15 @@ public final class AksenovDynamicGraph {
         if (r == null) {
             return l;
         }
-        if (l.y > r.y) {
-            l.r = merge(l.r, r);
-            l.update();
-            return l;
-        } else {
-            r.l = merge(l, r.l);
-            r.update();
-            return r;
-        }
-    }
 
-    private static void split(Node v, int size, Node[] answer) {
-        if (v == null) {
-            answer[0] = null;
-            answer[1] = null;
-        } else if (getSizeNode(v.l) >= size) {
-            split(v.l, size, answer);
-            v.l = answer[1];
-            v.update();
-            v.p = null;
-            answer[1] = v;
-        } else {
-            split(v.r, size - getSizeNode(v.l) - 1, answer);
-            v.r = answer[0];
-            v.update();
-            v.p = null;
-            answer[0] = v;
+        while (l.r != null) {
+            l = l.r;
         }
+        splay(l);
+        assert l.r == null;
+        l.setRight(r);
+        l.update();
+        return l;
     }
 
     private static Node getRoot(Node v) {
@@ -162,17 +267,6 @@ public final class AksenovDynamicGraph {
             v = v.p;
         }
         return v;
-    }
-
-    private static int getPosition(Node v) {
-        int sum = getSizeNode(v.l);
-        while (v.p != null) {
-            if (v.p.r == v) {
-                sum += getSizeNode(v.p.l) + 1;
-            }
-            v = v.p;
-        }
-        return sum;
     }
 
     private static class NodePair {
@@ -188,7 +282,6 @@ public final class AksenovDynamicGraph {
         Node[] vertexNode;
         HashMap<Edge, NodePair> nodeByEdge;
         Set<Edge>[] adjacent;
-        Node[] splitTemp = new Node[2];
 
         public Forest(int n, int level) {
             this.level = level;
@@ -203,52 +296,39 @@ public final class AksenovDynamicGraph {
         }
 
         public void makeFirst(Node v) {
-            Node head = getRoot(v);
-            int pos = getPosition(v);
-            split(head, pos, splitTemp);
-            merge(splitTemp[1], splitTemp[0]);
+            splay(v);
+            Node l = v.l;
+            if (l != null) {
+                v.cutLeft();
+                v.update();
+                merge(v, l);
+                splay(v);
+            }
         }
 
         public void link(Edge e) {
             int u = e.u;
             int v = e.v;
 
+            Node n1 = vertexNode[u];
+            Node n2 = vertexNode[v];
             makeFirst(vertexNode[u]);
             makeFirst(vertexNode[v]);
-            Node n1 = getRoot(vertexNode[u]);
-            Node n2 = getRoot(vertexNode[v]);
 
             Node c1 = new Node(e, level);
             Node c2 = new Node(e, level);
             nodeByEdge.put(e, new NodePair(c1, c2));
 
-            merge(merge(merge(n1, c1), n2), c2);
+            merge(merge(c2, n1), merge(c1, n2));
         }
 
         public void cut(Edge e) {
-            int u = e.u;
-            makeFirst(vertexNode[u]);
-            NodePair c = nodeByEdge.get(e);
-            nodeByEdge.remove(e);
-
-            int pos1 = getPosition(c.a);
-            int pos2 = getPosition(c.b);
-
-            if (pos1 > pos2) {
-                int q = pos1;
-                pos1 = pos2;
-                pos2 = q;
-            }
-            Node head = getRoot(vertexNode[u]);
-
-            split(head, pos2 + 1, splitTemp);
-            Node t11 = splitTemp[1];
-            split(splitTemp[0], pos2, splitTemp);
-            assert splitTemp[1] == c.a || splitTemp[1] == c.b;
-            split(splitTemp[0], pos1 + 1, splitTemp);
-            split(splitTemp[0], pos1, splitTemp);
-            assert splitTemp[1] == c.a || splitTemp[1] == c.b;
-            merge(splitTemp[0], t11);
+            NodePair c = nodeByEdge.remove(e);
+            makeFirst(c.b);
+            c.b.cutRight();
+            splay(c.a);
+            c.a.cutLeft();
+            c.a.cutRight();
         }
 
         public int getComponentSize(int v) {
