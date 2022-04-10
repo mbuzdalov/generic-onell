@@ -160,13 +160,9 @@ public final class AksenovDynamicGraph {
                     }
                 }
                 if (p.l == x) {
-                    p.l = null;
-                    x.p = null;
                     Node xr = x.r;
-                    x.r = null;
                     if (g.l == p) {
                         // Zig-zig
-                        p.p = null;
                         Node pr = p.r;
                         g.l = pr;
                         if (pr != null) {
@@ -176,7 +172,6 @@ public final class AksenovDynamicGraph {
                         g.p = p;
                     } else {
                         // Zig-zag
-                        p.p = null;
                         Node xl = x.l;
                         g.r = xl;
                         if (xl != null) {
@@ -191,13 +186,9 @@ public final class AksenovDynamicGraph {
                     }
                     x.r = p;
                 } else {
-                    p.r = null;
-                    x.p = null;
                     Node xl = x.l;
-                    x.l = null;
                     if (g.r == p) {
                         // Zig-zig
-                        p.p = null;
                         Node pl = p.l;
                         g.r = pl;
                         if (pl != null) {
@@ -207,7 +198,6 @@ public final class AksenovDynamicGraph {
                         g.p = p;
                     } else {
                         // Zig-zag
-                        p.p = null;
                         Node xr = x.r;
                         g.l = xr;
                         if (xr != null) {
