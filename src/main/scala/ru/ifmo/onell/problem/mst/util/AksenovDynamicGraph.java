@@ -111,6 +111,13 @@ public final class AksenovDynamicGraph {
         return node == null ? 0 : node.size;
     }
 
+    private static void updateToTop(Node v) {
+        while (v != null) {
+            v.update();
+            v = v.p;
+        }
+    }
+
     private static Node merge(Node l, Node r) {
         assert l != r;
 
@@ -180,21 +187,18 @@ public final class AksenovDynamicGraph {
         int level;
         Node[] vertexNode;
         HashMap<Edge, NodePair> nodeByEdge;
+        Set<Edge>[] adjacent;
         Node[] splitTemp = new Node[2];
 
         public Forest(int n, int level) {
             this.level = level;
+            //noinspection unchecked
+            this.adjacent = new Set[n];
             nodeByEdge = new HashMap<>();
             vertexNode = new Node[n];
             for (int i = 0; i < n; i++) {
-                vertexNode[i] = new Node(i, adjacent[i][level]);
-            }
-        }
-
-        public void updateToTop(Node v) {
-            while (v != null) {
-                v.update();
-                v = v.p;
+                adjacent[i] = new HashSet<>();
+                vertexNode[i] = new Node(i, adjacent[i]);
             }
         }
 
@@ -316,7 +320,6 @@ public final class AksenovDynamicGraph {
 
     private final int N;
     private final Forest[] forest;
-    private final HashSet<Edge>[][] adjacent;
     private final HashSet<Edge> edgeTaken; // is the edge was taken into consideration previously
 
     private int connectedComponents;
@@ -335,14 +338,6 @@ public final class AksenovDynamicGraph {
             k++;
         }
 
-        //noinspection unchecked
-        adjacent = new HashSet[n][k];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < k; j++) {
-                adjacent[i][j] = new HashSet<>();
-            }
-        }
-
         forest = new Forest[k];
         for (int i = 0; i < k; i++) {
             forest[i] = new Forest(n, i);
@@ -357,12 +352,6 @@ public final class AksenovDynamicGraph {
 
         for (int i = 0; i < forest.length; i++) {
             forest[i] = new Forest(N, i);
-        }
-
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < forest.length; j++) {
-                adjacent[i][j].clear();
-            }
         }
 
         edgeTaken.clear();
@@ -387,16 +376,17 @@ public final class AksenovDynamicGraph {
         }
         Edge e = new Edge(u, v);
         mirrorEdges[id] = e;
+        Forest f0 = forest[0];
 
-        if (!forest[0].isConnected(u, v)) { // If this is a spanning tree
-            forest[0].link(e); // link two forest trees together
+        if (!f0.isConnected(u, v)) { // If this is a spanning tree
+            f0.link(e); // link two forest trees together
             connectedComponents--;
         } else {
-            adjacent[u][0].add(e); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
-            adjacent[v][0].add(e);
+            f0.adjacent[u].add(e); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
+            f0.adjacent[v].add(e);
 
-            forest[0].updateToTop(forest[0].vertexNode[u]);
-            forest[0].updateToTop(forest[0].vertexNode[v]);
+            updateToTop(f0.vertexNode[u]);
+            updateToTop(f0.vertexNode[v]);
         }
 
         assert checkState();
@@ -408,25 +398,25 @@ public final class AksenovDynamicGraph {
         int v = edge.v;
         int level = edge.level;
         edge.level++;
+        Forest fCurr = forest[level];
+        Forest fNext = forest[level + 1];
         if (spanning) {
-            NodePair p = forest[level].nodeByEdge.get(new Edge(u, v));
-            assert p.a != null;
-            forest[level].updateToTop(p.a);
-            assert p.b != null;
-            forest[level].updateToTop(p.b);
-            forest[level + 1].link(edge);
+            NodePair p = fCurr.nodeByEdge.get(edge);
+            updateToTop(p.a);
+            updateToTop(p.b);
+            fNext.link(edge);
         } else {
-            adjacent[u][level].remove(edge);
-            forest[level].updateToTop(forest[level].vertexNode[u]);
-            adjacent[v][level].remove(edge);
-            forest[level].updateToTop(forest[level].vertexNode[v]);
+            fCurr.adjacent[u].remove(edge);
+            updateToTop(fCurr.vertexNode[u]);
+            fCurr.adjacent[v].remove(edge);
+            updateToTop(fCurr.vertexNode[v]);
 
-            adjacent[u][level + 1].add(edge);
-            forest[level + 1].updateToTop(forest[level + 1].vertexNode[u]);
-            adjacent[v][level + 1].add(edge);
-            forest[level + 1].updateToTop(forest[level + 1].vertexNode[v]);
+            fNext.adjacent[u].add(edge);
+            updateToTop(fNext.vertexNode[u]);
+            fNext.adjacent[v].add(edge);
+            updateToTop(fNext.vertexNode[v]);
 
-            assert forest[level + 1].isConnected(u, v);
+            assert fNext.isConnected(u, v);
         }
     }
 
@@ -445,11 +435,12 @@ public final class AksenovDynamicGraph {
         int rank = e.level;
 
         if (!forest[0].nodeByEdge.containsKey(e)) { // The edge is not in the spanning tree
-            adjacent[u][rank].remove(e); // simply remove from the adjacency list on level `level`
-            adjacent[v][rank].remove(e);
+            Forest fr = forest[rank];
+            fr.adjacent[u].remove(e); // simply remove from the adjacency list on level `level`
+            fr.adjacent[v].remove(e);
 
-            forest[rank].updateToTop(forest[rank].vertexNode[u]);
-            forest[rank].updateToTop(forest[rank].vertexNode[v]);
+            updateToTop(fr.vertexNode[u]);
+            updateToTop(fr.vertexNode[v]);
             return true;
         }
 
@@ -461,27 +452,27 @@ public final class AksenovDynamicGraph {
 
         boolean replaced = false;
         for (int level = rank; level >= 0; level--) {
-            int w = (forest[level].getComponentSize(u) > forest[level].getComponentSize(v))
-                    ? v : u; // Choose the smallest component
+            Forest fCurr = this.forest[level];
+            int w = (fCurr.getComponentSize(u) > fCurr.getComponentSize(v)) ? v : u; // Choose the smallest component
 
-            forest[level].prepareSpanningEdges();
-            forest[level].getSpanningEdges(getRoot(forest[level].vertexNode[w]));
-            for (Edge x : forest[level].spanningEdges) {
+            fCurr.prepareSpanningEdges();
+            fCurr.getSpanningEdges(getRoot(fCurr.vertexNode[w]));
+            for (Edge x : fCurr.spanningEdges) {
                 assert !forest[level + 1].isConnected(u, v);
                 increaseLevel(x, true);
             }
 
-            forest[level].prepareAllEdges();
-            Edge good = forest[level].getAllEdges(getRoot(forest[level].vertexNode[w]));
-            for (Edge x : forest[level].allEdges) {
+            fCurr.prepareAllEdges();
+            Edge good = fCurr.getAllEdges(getRoot(fCurr.vertexNode[w]));
+            for (Edge x : fCurr.allEdges) {
                 increaseLevel(x, false);
             }
 
             if (good != null) { // We found good edge
-                adjacent[good.u][level].remove(good);
-                adjacent[good.v][level].remove(good);
-                forest[level].updateToTop(forest[level].vertexNode[good.u]);
-                forest[level].updateToTop(forest[level].vertexNode[good.v]);
+                fCurr.adjacent[good.u].remove(good);
+                fCurr.adjacent[good.v].remove(good);
+                updateToTop(fCurr.vertexNode[good.u]);
+                updateToTop(fCurr.vertexNode[good.v]);
 
                 for (int i = level; i >= 0; i--) {
                     forest[i].link(good);
@@ -505,7 +496,7 @@ public final class AksenovDynamicGraph {
         if (CRAZY_ASSERTIONS) {
             for (int level = 0; level < forest.length; level++) {
                 for (int v = 0; v < N; v++) {
-                    for (Edge e : adjacent[v][level]) {
+                    for (Edge e : forest[level].adjacent[v]) {
                         if (e.level != level) return false;
                         if (!forest[level].isConnected(e.u, e.v)) return false;
                     }
