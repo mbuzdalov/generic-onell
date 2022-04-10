@@ -1,6 +1,7 @@
 package ru.ifmo.onell.problem.mst.util;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Implementation of dynamic connectivity based on a hierarchy of partial forests.
@@ -11,8 +12,6 @@ import java.util.*;
  */
 public final class AksenovDynamicGraph {
     private static final boolean CRAZY_ASSERTIONS = false;
-
-    private final Random rnd = new Random(239);
 
     private static class Edge {
         int u, v, level;
@@ -41,28 +40,28 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    private class Node {
+    private static class Node {
         Node l, r, p;
         final int y;
         int size;
         final Edge myEdge;
-        final int id;
-        final int level;
+        final Set<Edge> myAdjacentEdges;
+        final int levelOrId;
         boolean hasVertexInSubtree;
         boolean hasEdgeInSubtree;
 
-        public Node(int id, int level) {
-            y = rnd.nextInt();
-            this.id = id;
-            this.level = level;
+        public Node(int id, Set<Edge> myAdjacentEdges) {
+            y = ThreadLocalRandom.current().nextInt();
+            this.myAdjacentEdges = myAdjacentEdges;
+            this.levelOrId = id;
             this.myEdge = null;
             update();
         }
 
         public Node(Edge edge, int level) {
-            y = rnd.nextInt();
-            this.id = -1;
-            this.level = level;
+            y = ThreadLocalRandom.current().nextInt();
+            this.myAdjacentEdges = Collections.emptySet();
+            this.levelOrId = level;
             this.myEdge = edge;
             update();
         }
@@ -86,15 +85,12 @@ public final class AksenovDynamicGraph {
         }
 
         public Set<Edge> getEdgesAdjacentToVertex() {
-            if (myEdge == null) {
-                return adjacent[id][level];
-            }
-            return Collections.emptySet();
+            return myAdjacentEdges;
         }
 
         public Edge getAssociatedEdge() {
             if (myEdge != null) {
-                return myEdge.level == level ? myEdge : null;
+                return myEdge.level == levelOrId ? myEdge : null;
             }
             return null;
         }
@@ -104,7 +100,7 @@ public final class AksenovDynamicGraph {
             if (myEdge != null) {
                 me = myEdge.u + "->" + myEdge.v;
             } else {
-                me = String.valueOf(id);
+                me = String.valueOf(levelOrId);
             }
 
             return "[" + (l == null ? "" : l + ",") + me + (r == null ? "" : "," + r) + "]";
@@ -191,7 +187,7 @@ public final class AksenovDynamicGraph {
             nodeByEdge = new HashMap<>();
             vertexNode = new Node[n];
             for (int i = 0; i < n; i++) {
-                vertexNode[i] = new Node(i, level);
+                vertexNode[i] = new Node(i, adjacent[i][level]);
             }
         }
 
