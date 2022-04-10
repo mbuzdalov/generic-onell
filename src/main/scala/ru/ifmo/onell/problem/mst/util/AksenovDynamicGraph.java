@@ -101,25 +101,35 @@ public final class AksenovDynamicGraph {
         }
     }
 
+    private static void zigRight(Node p, Node g) {
+        Node pr = p.r;
+        g.l = pr;
+        if (pr != null) {
+            pr.p = g;
+        }
+        p.r = g;
+        g.p = p;
+    }
+
+    private static void zigLeft(Node p, Node g) {
+        Node pl = p.l;
+        g.r = pl;
+        if (pl != null) {
+            pl.p = g;
+        }
+        p.l = g;
+        g.p = p;
+    }
+
     private static void splay(Node x) {
         Node p, g;
         while ((p = x.p) != null) {
             if ((g = p.p) == null) {
                 // Zig
                 if (p.l == x) {
-                    Node xr = x.r;
-                    p.l = xr;
-                    if (xr != null) {
-                        xr.p = p;
-                    }
-                    x.r = p;
+                    zigRight(x, p);
                 } else {
-                    Node xl = x.l;
-                    p.r = xl;
-                    if (xl != null) {
-                        xl.p = p;
-                    }
-                    x.l = p;
+                    zigLeft(x, p);
                 }
                 x.p = null;
             } else {
@@ -133,62 +143,27 @@ public final class AksenovDynamicGraph {
                     }
                 }
                 if (p.l == x) {
-                    Node xr = x.r;
                     if (g.l == p) {
                         // Zig-zig
-                        Node pr = p.r;
-                        g.l = pr;
-                        if (pr != null) {
-                            pr.p = g;
-                        }
-                        p.r = g;
-                        g.p = p;
+                        zigRight(p, g);
                     } else {
                         // Zig-zag
-                        Node xl = x.l;
-                        g.r = xl;
-                        if (xl != null) {
-                            xl.p = g;
-                        }
-                        x.l = g;
-                        g.p = x;
+                        zigLeft(x, g);
                     }
-                    p.l = xr;
-                    if (xr != null) {
-                        xr.p = p;
-                    }
-                    x.r = p;
+                    zigRight(x, p);
                 } else {
-                    Node xl = x.l;
                     if (g.r == p) {
                         // Zig-zig
-                        Node pl = p.l;
-                        g.r = pl;
-                        if (pl != null) {
-                            pl.p = g;
-                        }
-                        p.l = g;
-                        g.p = p;
+                        zigLeft(p, g);
                     } else {
                         // Zig-zag
-                        Node xr = x.r;
-                        g.l = xr;
-                        if (xr != null) {
-                            xr.p = g;
-                        }
-                        x.r = g;
-                        g.p = x;
+                        zigRight(x, g);
                     }
-                    p.r = xl;
-                    if (xl != null) {
-                        xl.p = p;
-                    }
-                    x.l = p;
+                    zigLeft(x, p);
                 }
                 x.p = gg;
                 g.update();
             }
-            p.p = x;
             p.update();
             x.update();
         }
