@@ -48,53 +48,55 @@ public final class AksenovDynamicGraph {
         final Edge myEdge;
         final int id;
         final int level;
-        boolean hasVertex;
-        boolean hasEdge;
+        boolean hasVertexInSubtree;
+        boolean hasEdgeInSubtree;
 
         public Node(int id, int level) {
             y = rnd.nextInt();
-            size = 1;
             this.id = id;
             this.level = level;
             this.myEdge = null;
-            hasVertex = isHasVertex();
-            hasEdge = isHasEdge();
+            update();
         }
 
         public Node(Edge edge, int level) {
             y = rnd.nextInt();
-            size = 1;
             this.id = -1;
             this.level = level;
             this.myEdge = edge;
-            hasVertex = isHasVertex();
-            hasEdge = isHasEdge();
+            update();
         }
 
         public void update() {
-            size = getSizeNode(l) + getSizeNode(r) + 1;
-            hasVertex = getHasVertexNode(l) || getHasVertexNode(r) || isHasVertex();
-            hasEdge = getHasEdgeNode(l) || getHasEdgeNode(r) || isHasEdge();
+            hasVertexInSubtree = !getEdgesAdjacentToVertex().isEmpty();
+            hasEdgeInSubtree = getAssociatedEdge() != null;
+            size = 1;
             if (l != null) {
                 l.p = this;
+                hasVertexInSubtree |= l.hasVertexInSubtree;
+                hasEdgeInSubtree |= l.hasEdgeInSubtree;
+                size += l.size;
             }
             if (r != null) {
                 r.p = this;
+                hasVertexInSubtree |= r.hasVertexInSubtree;
+                hasEdgeInSubtree |= r.hasEdgeInSubtree;
+                size += r.size;
             }
         }
 
-        public boolean isHasVertex() {
+        public Set<Edge> getEdgesAdjacentToVertex() {
             if (myEdge == null) {
-                return !adjacent[id][level].isEmpty();
+                return adjacent[id][level];
             }
-            return false;
+            return Collections.emptySet();
         }
 
-        public boolean isHasEdge() {
+        public Edge getAssociatedEdge() {
             if (myEdge != null) {
-                return myEdge.level == level;
+                return myEdge.level == level ? myEdge : null;
             }
-            return false;
+            return null;
         }
 
         public String toString() {
@@ -111,14 +113,6 @@ public final class AksenovDynamicGraph {
 
     private static int getSizeNode(Node node) {
         return node == null ? 0 : node.size;
-    }
-
-    private static boolean getHasVertexNode(Node node) {
-        return node != null && node.hasVertex;
-    }
-
-    private static boolean getHasEdgeNode(Node node) {
-        return node != null && node.hasEdge;
     }
 
     private static Node merge(Node l, Node r) {
@@ -272,11 +266,11 @@ public final class AksenovDynamicGraph {
             if (root == null) {
                 return;
             }
-            if (!root.hasEdge) {
+            if (!root.hasEdgeInSubtree) {
                 return;
             }
-            if (root.isHasEdge()) {
-                Edge e = root.myEdge;
+            Edge e = root.getAssociatedEdge();
+            if (e != null) {
                 if (!edgeTaken.contains(e)) { // It could be put 2 times, direct or inverse
                     edgeTaken.add(e);
                     spanningEdges.add(e);
@@ -297,19 +291,17 @@ public final class AksenovDynamicGraph {
             if (root == null) {
                 return null;
             }
-            if (!root.hasVertex) {
+            if (!root.hasVertexInSubtree) {
                 return null;
             }
-            if (root.isHasVertex()) {
-                for (Edge e : adjacent[root.id][root.level]) {
-                    if (isConnected(e.u, e.v)) {
-                        if (!edgeTaken.contains(e)) {
-                            edgeTaken.add(e);
-                            allEdges.add(e);
-                        }
-                    } else {
-                        return e;
+            for (Edge e : root.getEdgesAdjacentToVertex()) {
+                if (isConnected(e.u, e.v)) {
+                    if (!edgeTaken.contains(e)) {
+                        edgeTaken.add(e);
+                        allEdges.add(e);
                     }
+                } else {
+                    return e;
                 }
             }
             Edge tmp = getAllEdges(root.l);
