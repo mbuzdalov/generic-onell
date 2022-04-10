@@ -169,43 +169,63 @@ public final class AksenovDynamicGraph {
                     }
                 }
                 if (p.l == x) {
-                    p.cutLeft();
-                    Node xr = x.cutRight();
+                    p.l = null;
+                    x.p = null;
+                    Node xr = x.r;
+                    x.r = null;
                     if (g.l == p) {
                         // Zig-zig
-                        g.cutLeft();
-                        Node pr = p.cutRight();
-                        g.setLeft(pr);
-                        p.setRight(g);
-                        p.setLeft(xr);
+                        p.p = null;
+                        Node pr = p.r;
+                        g.l = pr;
+                        if (pr != null) {
+                            pr.p = g;
+                        }
+                        p.r = g;
+                        g.p = p;
                     } else {
                         // Zig-zag
-                        g.cutRight();
+                        g.r = null;
+                        p.p = null;
                         Node xl = x.cutLeft();
                         g.setRight(xl);
-                        p.setLeft(xr);
                         x.setLeft(g);
                     }
-                    x.setRight(p);
+                    p.l = xr;
+                    if (xr != null) {
+                        xr.p = p;
+                    }
+                    x.r = p;
+                    p.p = x;
                 } else {
-                    p.cutRight();
-                    Node xl = x.cutLeft();
+                    p.r = null;
+                    x.p = null;
+                    Node xl = x.l;
+                    x.l = null;
                     if (g.r == p) {
                         // Zig-zig
-                        g.cutRight();
-                        Node pl = p.cutLeft();
-                        g.setRight(pl);
-                        p.setLeft(g);
-                        p.setRight(xl);
+                        p.p = null;
+                        Node pl = p.l;
+                        g.r = pl;
+                        if (pl != null) {
+                            pl.p = g;
+                        }
+                        p.l = g;
+                        g.p = p;
                     } else {
                         // Zig-zag
-                        g.cutLeft();
+                        g.l = null;
+                        p.p = null;
                         Node xr = x.cutRight();
                         g.setLeft(xr);
-                        p.setRight(xl);
                         x.setRight(g);
                     }
-                    x.setLeft(p);
+                    p.r = xl;
+                    if (xl != null) {
+                        xl.p = p;
+                    }
+                    x.l = p;
+                    p.p = x;
                 }
                 g.update();
                 p.update();
