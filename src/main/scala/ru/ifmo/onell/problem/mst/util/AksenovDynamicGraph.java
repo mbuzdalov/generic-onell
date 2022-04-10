@@ -330,11 +330,10 @@ public final class AksenovDynamicGraph {
     private final HashMap<Integer, Edge> edges; // Edge by id
     private final HashMap<Edge, Integer> edgeIndex; // id by edge
     private final HashSet<Integer> edgeTaken; // is the edge was taken into consideration previously
-    private int curEdge;
 
     private int connectedComponents;
 
-    public AksenovDynamicGraph(int n) {
+    public AksenovDynamicGraph(int n, DynamicGraph.Edge[] incomingEdges) {
         N = n;
 
         connectedComponents = n;
@@ -379,8 +378,6 @@ public final class AksenovDynamicGraph {
         edgeIndex.clear();
         edges.clear();
         edgeTaken.clear();
-
-        curEdge = 0;
     }
 
     public int numberOfCC() {
@@ -391,12 +388,11 @@ public final class AksenovDynamicGraph {
         return forest[0].isConnected(u, v);
     }
 
-    public boolean addEdge(int u, int v) {
-        if (u > v) {
-            int q = u;
-            u = v;
-            v = q;
-        }
+    public boolean addEdge(DynamicGraph.Edge theEdge) {
+        int u = theEdge.vertexA();
+        int v = theEdge.vertexB();
+        assert u < v;
+        int curEdge = theEdge.id();
 
         Edge e = new Edge(u, v);
         if (edgeIndex.containsKey(e)) { // If the edge exist, do nothing
@@ -415,8 +411,6 @@ public final class AksenovDynamicGraph {
             forest[0].updateToTop(forest[0].vertexNode[u]);
             forest[0].updateToTop(forest[0].vertexNode[v]);
         }
-
-        curEdge++;
 
         assert checkState();
         return true;
@@ -449,17 +443,18 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public boolean removeEdge(int u, int v) {
-        if (u > v) {
-            int q = u;
-            u = v;
-            v = q;
-        }
-        Integer id = edgeIndex.get(new Edge(u, v));
+    public boolean removeEdge(DynamicGraph.Edge theEdge) {
+        int u = theEdge.vertexA();
+        int v = theEdge.vertexB();
+        int id = theEdge.id();
+        assert u < v;
 
-        if (id == null) {
+        Integer tmpId = edgeIndex.get(new Edge(u, v));
+
+        if (tmpId == null) {
             return false;
         }
+        assert id == tmpId;
 
         Edge e = edges.get(id);
 
