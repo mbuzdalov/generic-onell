@@ -41,27 +41,32 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    private enum NodeType {
-        VERTEX,
-        EDGE
-    }
-
     private class Node {
         Node l, r, p;
         final int y;
         int size;
-        final NodeType type;
+        final Edge myEdge;
         final int id;
         final int level;
         boolean hasVertex;
         boolean hasEdge;
 
-        public Node(NodeType type, int id, int level) {
+        public Node(int id, int level) {
             y = rnd.nextInt();
             size = 1;
-            this.type = type;
             this.id = id;
             this.level = level;
+            this.myEdge = null;
+            hasVertex = isHasVertex();
+            hasEdge = isHasEdge();
+        }
+
+        public Node(Edge edge, int id, int level) {
+            y = rnd.nextInt();
+            size = 1;
+            this.id = id;
+            this.level = level;
+            this.myEdge = edge;
             hasVertex = isHasVertex();
             hasEdge = isHasEdge();
         }
@@ -79,23 +84,23 @@ public final class AksenovDynamicGraph {
         }
 
         public boolean isHasVertex() {
-            if (type == NodeType.VERTEX) {
+            if (myEdge == null) {
                 return !adjacent[id][level].isEmpty();
             }
             return false;
         }
 
         public boolean isHasEdge() {
-            if (type == NodeType.EDGE) {
-                return edges.get(id).level == level;
+            if (myEdge != null) {
+                return myEdge.level == level;
             }
             return false;
         }
 
         public String toString() {
             String me;
-            if (type == NodeType.EDGE) {
-                me = edges.get(id).u + "->" + edges.get(id).v;
+            if (myEdge != null) {
+                me = myEdge.u + "->" + myEdge.v;
             } else {
                 me = String.valueOf(id);
             }
@@ -192,7 +197,7 @@ public final class AksenovDynamicGraph {
             nodeByEdge = new HashMap<>();
             vertexNode = new Node[n];
             for (int i = 0; i < n; i++) {
-                vertexNode[i] = new Node(NodeType.VERTEX, i, level);
+                vertexNode[i] = new Node(i, level);
             }
         }
 
@@ -210,32 +215,28 @@ public final class AksenovDynamicGraph {
             merge(splitTemp[1], splitTemp[0]);
         }
 
-        public void link(int u, int v) {
-            if (u > v) {
-                int q = u;
-                u = v;
-                v = q;
-            }
+        public void link(Edge e) {
+            int u = e.u;
+            int v = e.v;
 
             makeFirst(vertexNode[u]);
             makeFirst(vertexNode[v]);
             Node n1 = getRoot(vertexNode[u]);
             Node n2 = getRoot(vertexNode[v]);
 
-            int edgeId = edgeIndex.get(new Edge(u, v));
-            Node c1 = new Node(NodeType.EDGE, edgeId, level);
-            Node c2 = new Node(NodeType.EDGE, edgeId, level);
-            nodeByEdge.put(new Edge(u, v), new NodePair(c1, c2));
+            int edgeId = edgeIndex.get(e);
+            Node c1 = new Node(e, edgeId, level);
+            Node c2 = new Node(e, edgeId, level);
+            nodeByEdge.put(e, new NodePair(c1, c2));
 
             merge(merge(merge(n1, c1), n2), c2);
         }
 
-        public void cut(int u, int v) {
+        public void cut(Edge e) {
+            int u = e.u;
             makeFirst(vertexNode[u]);
-
-            Edge l = new Edge(u, v);
-            NodePair c = nodeByEdge.get(l);
-            nodeByEdge.remove(l);
+            NodePair c = nodeByEdge.get(e);
+            nodeByEdge.remove(e);
 
             int pos1 = getPosition(c.a);
             int pos2 = getPosition(c.b);
@@ -261,7 +262,7 @@ public final class AksenovDynamicGraph {
             return getRoot(vertexNode[v]).size;
         }
 
-        private final List<Integer> spanningEdges = new ArrayList<>();
+        private final List<Edge> spanningEdges = new ArrayList<>();
 
         public void prepareSpanningEdges() {
             spanningEdges.clear();
@@ -276,44 +277,44 @@ public final class AksenovDynamicGraph {
                 return;
             }
             if (root.isHasEdge()) {
-                if (!edgeTaken.contains(root.id)) { // It could be put 2 times, direct or inverse
-                    edgeTaken.add(root.id);
-                    spanningEdges.add(root.id);
+                Edge e = root.myEdge;
+                if (!edgeTaken.contains(e)) { // It could be put 2 times, direct or inverse
+                    edgeTaken.add(e);
+                    spanningEdges.add(e);
                 }
             }
             getSpanningEdges(root.l);
             getSpanningEdges(root.r);
         }
 
-        private final List<Integer> allEdges = new ArrayList<>();
+        private final List<Edge> allEdges = new ArrayList<>();
 
         public void prepareAllEdges() {
             allEdges.clear();
             edgeTaken.clear();
         }
 
-        public int getAllEdges(Node root) {
+        public Edge getAllEdges(Node root) {
             if (root == null) {
-                return -1;
+                return null;
             }
             if (!root.hasVertex) {
-                return -1;
+                return null;
             }
             if (root.isHasVertex()) {
-                for (int x : adjacent[root.id][root.level]) {
-                    Edge e = edges.get(x);
+                for (Edge e : adjacent[root.id][root.level]) {
                     if (isConnected(e.u, e.v)) {
-                        if (!edgeTaken.contains(x)) {
-                            edgeTaken.add(x);
-                            allEdges.add(x);
+                        if (!edgeTaken.contains(e)) {
+                            edgeTaken.add(e);
+                            allEdges.add(e);
                         }
                     } else {
-                        return x;
+                        return e;
                     }
                 }
             }
-            int tmp = getAllEdges(root.l);
-            if (tmp != -1) {
+            Edge tmp = getAllEdges(root.l);
+            if (tmp != null) {
                 return tmp;
             }
             return getAllEdges(root.r);
@@ -328,15 +329,17 @@ public final class AksenovDynamicGraph {
 
     private final int N;
     private final Forest[] forest;
-    private final HashSet<Integer>[][] adjacent;
-    private final HashMap<Integer, Edge> edges; // Edge by id
+    private final HashSet<Edge>[][] adjacent;
     private final HashMap<Edge, Integer> edgeIndex; // id by edge
-    private final HashSet<Integer> edgeTaken; // is the edge was taken into consideration previously
+    private final HashSet<Edge> edgeTaken; // is the edge was taken into consideration previously
 
     private int connectedComponents;
+    private final Edge[] mirrorEdges;
 
     public AksenovDynamicGraph(int n, DynamicGraph.Edge[] incomingEdges) {
         N = n;
+
+        mirrorEdges = new Edge[incomingEdges.length];
 
         connectedComponents = n;
         int p = 1;
@@ -360,12 +363,12 @@ public final class AksenovDynamicGraph {
         }
 
         edgeIndex = new HashMap<>();
-        edges = new HashMap<>();
         edgeTaken = new HashSet<>();
     }
 
     public void clear() {
         connectedComponents = N;
+        Arrays.fill(mirrorEdges, null);
 
         for (int i = 0; i < forest.length; i++) {
             forest[i] = new Forest(N, i);
@@ -378,7 +381,6 @@ public final class AksenovDynamicGraph {
         }
 
         edgeIndex.clear();
-        edges.clear();
         edgeTaken.clear();
     }
 
@@ -394,21 +396,21 @@ public final class AksenovDynamicGraph {
         int u = theEdge.vertexA();
         int v = theEdge.vertexB();
         assert u < v;
-        int curEdge = theEdge.id();
+        int id = theEdge.id();
 
-        Edge e = new Edge(u, v);
-        if (edgeIndex.containsKey(e)) { // If the edge exist, do nothing
+        if (mirrorEdges[id] != null) {
             return false;
         }
-        edgeIndex.put(e, curEdge);
-        edges.put(curEdge, e);
+        Edge e = new Edge(u, v);
+        mirrorEdges[id] = e;
+        edgeIndex.put(e, id);
 
         if (!forest[0].isConnected(u, v)) { // If this is a spanning tree
-            forest[0].link(u, v); // link two forest trees together
+            forest[0].link(e); // link two forest trees together
             connectedComponents--;
         } else {
-            adjacent[u][0].add(curEdge); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
-            adjacent[v][0].add(curEdge);
+            adjacent[u][0].add(e); // simply add to adjacency list on level 0 and update hasVertex and hasEdge
+            adjacent[v][0].add(e);
 
             forest[0].updateToTop(forest[0].vertexNode[u]);
             forest[0].updateToTop(forest[0].vertexNode[v]);
@@ -418,8 +420,7 @@ public final class AksenovDynamicGraph {
         return true;
     }
 
-    private void increaseLevel(int x, boolean spanning) {
-        Edge edge = edges.get(x);
+    private void increaseLevel(Edge edge, boolean spanning) {
         int u = edge.u;
         int v = edge.v;
         int level = edge.level;
@@ -430,16 +431,16 @@ public final class AksenovDynamicGraph {
             forest[level].updateToTop(p.a);
             assert p.b != null;
             forest[level].updateToTop(p.b);
-            forest[level + 1].link(u, v);
+            forest[level + 1].link(edge);
         } else {
-            adjacent[u][level].remove(x);
+            adjacent[u][level].remove(edge);
             forest[level].updateToTop(forest[level].vertexNode[u]);
-            adjacent[v][level].remove(x);
+            adjacent[v][level].remove(edge);
             forest[level].updateToTop(forest[level].vertexNode[v]);
 
-            adjacent[u][level + 1].add(x);
+            adjacent[u][level + 1].add(edge);
             forest[level + 1].updateToTop(forest[level + 1].vertexNode[u]);
-            adjacent[v][level + 1].add(x);
+            adjacent[v][level + 1].add(edge);
             forest[level + 1].updateToTop(forest[level + 1].vertexNode[v]);
 
             assert forest[level + 1].isConnected(u, v);
@@ -459,24 +460,24 @@ public final class AksenovDynamicGraph {
         }
         assert id == tmpId;
 
-        Edge e = edges.get(id);
+        Edge e = mirrorEdges[id];
+        mirrorEdges[id] = null;
 
         int rank = e.level;
 
         if (!forest[0].nodeByEdge.containsKey(e)) { // The edge is not in the spanning tree
-            adjacent[u][rank].remove(id); // simply remove from the adjacency list on level `level`
-            adjacent[v][rank].remove(id);
+            adjacent[u][rank].remove(e); // simply remove from the adjacency list on level `level`
+            adjacent[v][rank].remove(e);
 
             forest[rank].updateToTop(forest[rank].vertexNode[u]);
             forest[rank].updateToTop(forest[rank].vertexNode[v]);
 
             edgeIndex.remove(e);
-            edges.remove(id);
             return true;
         }
 
         for (int level = rank; level >= 0; level--) {
-            forest[level].cut(u, v);
+            forest[level].cut(e);
         }
 
         assert !isConnected(u, v);
@@ -488,27 +489,25 @@ public final class AksenovDynamicGraph {
 
             forest[level].prepareSpanningEdges();
             forest[level].getSpanningEdges(getRoot(forest[level].vertexNode[w]));
-            for (int x : forest[level].spanningEdges) {
+            for (Edge x : forest[level].spanningEdges) {
                 assert !forest[level + 1].isConnected(u, v);
                 increaseLevel(x, true);
             }
 
             forest[level].prepareAllEdges();
-            int good = forest[level].getAllEdges(getRoot(forest[level].vertexNode[w]));
-            for (int x : forest[level].allEdges) {
+            Edge good = forest[level].getAllEdges(getRoot(forest[level].vertexNode[w]));
+            for (Edge x : forest[level].allEdges) {
                 increaseLevel(x, false);
             }
 
-            if (good != -1) { // We found good edge
-                Edge ge = edges.get(good);
-
-                adjacent[ge.u][level].remove(good);
-                adjacent[ge.v][level].remove(good);
-                forest[level].updateToTop(forest[level].vertexNode[ge.u]);
-                forest[level].updateToTop(forest[level].vertexNode[ge.v]);
+            if (good != null) { // We found good edge
+                adjacent[good.u][level].remove(good);
+                adjacent[good.v][level].remove(good);
+                forest[level].updateToTop(forest[level].vertexNode[good.u]);
+                forest[level].updateToTop(forest[level].vertexNode[good.v]);
 
                 for (int i = level; i >= 0; i--) {
-                    forest[i].link(ge.u, ge.v);
+                    forest[i].link(good);
                 }
 
                 replaced = true;
@@ -521,7 +520,6 @@ public final class AksenovDynamicGraph {
         }
 
         edgeIndex.remove(e);
-        edges.remove(id);
 
         assert checkState();
 
@@ -532,8 +530,7 @@ public final class AksenovDynamicGraph {
         if (CRAZY_ASSERTIONS) {
             for (int level = 0; level < forest.length; level++) {
                 for (int v = 0; v < N; v++) {
-                    for (int x : adjacent[v][level]) {
-                        Edge e = edges.get(x);
+                    for (Edge e : adjacent[v][level]) {
                         if (e.level != level) return false;
                         if (!forest[level].isConnected(e.u, e.v)) return false;
                     }
