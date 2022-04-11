@@ -334,8 +334,10 @@ public final class AksenovDynamicGraph {
             int v = e.v;
             adjacent[u].add(e);
             adjacent[v].add(e);
-            updateToTop(vertexNode[u]);
-            updateToTop(vertexNode[v]);
+            splay(vertexNode[u]);
+            vertexNode[u].update();
+            splay(vertexNode[v]);
+            vertexNode[v].update();
         }
 
         public void removeNonSpanningEdge(Edge e) {
@@ -343,8 +345,10 @@ public final class AksenovDynamicGraph {
             int v = e.v;
             adjacent[u].remove(e);
             adjacent[v].remove(e);
-            updateToTop(vertexNode[u]);
-            updateToTop(vertexNode[v]);
+            splay(vertexNode[u]);
+            vertexNode[u].update();
+            splay(vertexNode[v]);
+            vertexNode[v].update();
         }
     }
 
