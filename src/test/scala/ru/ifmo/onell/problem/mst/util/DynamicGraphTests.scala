@@ -351,5 +351,5 @@ class DynamicGraphTests extends AnyFlatSpec with Matchers {
   }
 
   test("Naive implementation", NaiveDynamicGraph)
-  test("Original implementation by Vitaly Aksenov", AksenovDynamicGraphWrapper)
+  test("Implementation by Vitaly Aksenov improved by MB", AksenovDynamicGraphWrapper)
 }
