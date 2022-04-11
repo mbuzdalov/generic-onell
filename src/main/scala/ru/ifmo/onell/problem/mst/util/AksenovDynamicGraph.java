@@ -135,13 +135,13 @@ public final class AksenovDynamicGraph {
             } else {
                 Node gg = g.p;
                 if (gg != null) {
-                    g.p = null;
                     if (gg.l == g) {
                         gg.l = x;
                     } else {
                         gg.r = x;
                     }
                 }
+                x.p = gg;
                 if (p.l == x) {
                     if (g.l == p) {
                         // Zig-zig
@@ -161,7 +161,6 @@ public final class AksenovDynamicGraph {
                     }
                     zigLeft(x, p);
                 }
-                x.p = gg;
                 g.update();
             }
             p.update();
