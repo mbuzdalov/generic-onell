@@ -376,15 +376,6 @@ public final class AksenovDynamicGraph {
         }
     }
 
-    public void clear() {
-        connectedComponents = N;
-        Arrays.fill(mirrorEdges, null);
-
-        for (int i = 0; i < forest.length; i++) {
-            forest[i] = new Forest(N, i);
-        }
-    }
-
     public int numberOfCC() {
         return connectedComponents;
     }
