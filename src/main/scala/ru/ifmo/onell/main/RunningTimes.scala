@@ -92,7 +92,10 @@ object RunningTimes extends Main.Module {
     case "bits:vcp:ps"     => vertexCoverPSSimple(parseContext(args))
     case "bits:vcp:bip"    => vertexCoverBipartiteSimple(parseContext(args))
     case "bits:vcp:rnd"    => vertexCoverRandomSimple(parseContext(args), args.getOption("--instances").toInt)
-    case "bits:mst-tree"   => treeOnlyMST(parseContext(args))
+    case "bits:mst-tree"   => treeOnlyMST(parseContext(args),
+                                          args.getOption("--instances").toInt,
+                                          args.getOption("--max-weight").split(',').map(_.toInt),
+                                          args.getOption("--edge-multiple").split(',').map(_.toInt))
     case "bits:jump:3d"    => threeDistributionsJump(parseContext(args))
     case "perm:om"         => permOneMaxSimple(parseContext(args))
     case "bits:om:tuning"  => bitsOneMaxAllTuningChoices(parseContext(args))
@@ -599,7 +602,7 @@ object RunningTimes extends Main.Module {
     }
   }
 
-  private def treeOnlyMST(context: Context): Unit = {
+  private def treeOnlyMST(context: Context, nInstances: Int, maxWeights: Seq[Int], edgeMultiples: Seq[Int]): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
@@ -607,17 +610,24 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
     )
 
-    val rng = new java.util.Random(872454326413212L)
+    val baseRNG = new java.util.Random(872454326413212L)
+    val seeds = IndexedSeq.fill(nInstances)(baseRNG.nextLong())
+
     context.run { (scheduler, n) =>
-      val e = 2 * n
-      val mst = TreeOnlyMST.randomGraph(n, e, 1, 2, rng, NaiveDynamicGraph)
-      for ((name, alg) <- algorithms) {
-        scheduler addTask {
-          implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
-          val t0 = System.nanoTime()
-          val time = alg.optimize(mst)
-          val consumed = (System.nanoTime() - t0) * 1e-9
-          s"""{"nVertices":$n,"nEdges":$e,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
+      for {
+        e <- edgeMultiples.map(_ * n)
+        w <- maxWeights
+        inst <- 0 until nInstances
+      } {
+        val mst = TreeOnlyMST.randomGraph(n, e, 1, w, new java.util.Random(seeds(inst)), NaiveDynamicGraph)
+        for ((name, alg) <- algorithms) {
+          scheduler addTask {
+            implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
+            val t0 = System.nanoTime()
+            val time = alg.optimize(mst)
+            val consumed = (System.nanoTime() - t0) * 1e-9
+            s"""{"nVertices":$n,"nEdges":$e,"maxWeight":$w,"instance":$inst,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
+          }
         }
       }
     }
