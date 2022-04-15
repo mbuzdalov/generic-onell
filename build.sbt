@@ -6,7 +6,7 @@ lazy val commonSettings = Seq(
   fork := true
 )
 
-lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.9" % Test
+lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.11" % Test
 lazy val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.13.1"
 lazy val jGraphT = "org.jgrapht" % "jgrapht-core" % "1.5.1" // used for solving vertex covers
 
