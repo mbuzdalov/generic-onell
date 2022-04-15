@@ -1,7 +1,6 @@
 package ru.ifmo.onell.main.util
 
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.oll.CompatibilityLayer
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 
 object AlgorithmCodeNames {
