@@ -3,13 +3,13 @@ package ru.ifmo.onell.problem
 import ru.ifmo.onell.Fitness
 import ru.ifmo.onell.util.{Helpers, OrderedSet}
 
-class OneMax(val problemSize: Int)
+class OneMax(val problemSize: Int, val dist_to_opt: Int = 0)
   extends Fitness[Array[Boolean], Int, Int]
 {
   override def worstFitness: Int = -1
   override def evaluate(individual: Array[Boolean]): Int = Helpers.countTrueBits(individual)
   override def compare(lhs: Int, rhs: Int): Int = lhs - rhs
-  override def isOptimalFitness(fitness: Int): Boolean = fitness == problemSize
+  override def isOptimalFitness(fitness: Int): Boolean = fitness >= (problemSize - dist_to_opt)
   override def numberOfChanges: Int = problemSize
   override def changeIndexTypeToLong(st: Int): Long = st
 
