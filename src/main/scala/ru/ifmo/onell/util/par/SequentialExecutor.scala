@@ -1,19 +1,13 @@
 package ru.ifmo.onell.util.par
 
-import java.io.PrintWriter
+import scala.collection.mutable.ArrayBuffer
 
-class SequentialExecutor(pw: PrintWriter, prefix: String, sep: String, suffix: String) extends Executor[String] {
-  private[this] var isFirst = true
-
-  override def addTask(fun: => String): Unit = {
-    val line = (if (isFirst) prefix else sep) + fun
-    isFirst = false
-    pw.print(line)
-    pw.flush()
-    print(line)
-  }
-
-  override def close(): Unit = {
-    pw.print(suffix)
+class SequentialExecutor[T] extends Executor[T] {
+  private[this] val callbacks = new ArrayBuffer[T => Unit]()
+  override def close(): Unit = {}
+  override def addSynchronousCallback(fun: T => Unit): Unit = callbacks += fun
+  override def addTask(fun: => T): Unit = {
+    val result = fun
+    callbacks.foreach(_(result))
   }
 }

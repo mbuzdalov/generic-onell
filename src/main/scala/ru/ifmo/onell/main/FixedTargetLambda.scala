@@ -9,7 +9,7 @@ import scala.util.Using
 
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.{createOnePlusLambdaLambdaGA, powerLawLambda}
 import ru.ifmo.onell.problem.OneMax
-import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutorFT}
+import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutor}
 import ru.ifmo.onell.{IterationLogger, Main}
 
 object FixedTargetLambda extends Main.Module {
@@ -111,7 +111,7 @@ object FixedTargetLambda extends Main.Module {
     }
 
     private def makeScheduler(): Executor[Unit] =
-      new ParallelExecutorFT(nThreads)
+      new ParallelExecutor[Unit](nThreads)
   }
 
   override def moduleMain(args: Array[String]): Unit = {
