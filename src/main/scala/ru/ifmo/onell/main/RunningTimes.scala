@@ -119,21 +119,35 @@ object RunningTimes extends Main.Module {
     private[this] val jsonSeparator = "\n,"
     private[this] val jsonSuffix = "\n]\n"
 
-    def run(fun: (Executor, Int) => Any): Unit = {
+    private class JsonCallback(pw: PrintWriter) extends (String => Unit) {
+      private[this] var isFirst = true
+
+      override def apply(v1: String): Unit = {
+        if (isFirst) {
+          pw.print(jsonPrefix)
+          isFirst = false
+        } else {
+          pw.print(jsonSeparator)
+        }
+        pw.print(v1)
+        println(v1)
+      }
+    }
+
+    private def makeScheduler(nThreads: Int): Executor[String] =
+      if (nThreads == 1) new SequentialExecutor() else new ParallelExecutor(nThreads)
+
+    def run(fun: (Executor[String], Int) => Any): Unit = {
       Using.resource(new PrintWriter(outName)) { moreOut =>
-        Using.resource(makeScheduler(moreOut)) { scheduler =>
+        Using.resource(makeScheduler(nThreads)) { scheduler =>
+          scheduler.addSynchronousCallback(new JsonCallback(moreOut))
           val multiplexer = new Multiplexer(scheduler, nRuns)
           for (p <- powers) {
             fun(multiplexer, 1 << p)
           }
         }
+        moreOut.print(jsonSuffix)
       }
-    }
-
-    private def makeScheduler(moreOut: PrintWriter): Executor = if (nThreads == 1) {
-      new SequentialExecutor(moreOut, jsonPrefix, jsonSeparator, jsonSuffix)
-    } else {
-      new ParallelExecutor(moreOut, jsonPrefix, jsonSeparator, jsonSuffix, nThreads)
     }
   }
 
