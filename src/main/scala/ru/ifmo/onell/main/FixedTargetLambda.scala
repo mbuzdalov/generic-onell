@@ -1,7 +1,7 @@
 package ru.ifmo.onell.main
 
-import java.io.PrintWriter
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLongArray}
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicLongArray
 
 import scala.language.postfixOps
 import scala.math.BigDecimal.double2bigDecimal
@@ -16,34 +16,36 @@ object FixedTargetLambda extends Main.Module {
   override def name: String = "ft-lambda"
   override def shortDescription: String = "Runs experiments about fixed-target performance of the (1+(λ,λ)) GA"
   override def longDescription: Seq[String] = Seq(
-    "Runs experiments about fixed-target performance of the (1+(λ,λ)) GA on OneMax.",
+    "Runs experiments about fixed-target performance of the heavy-tailed (1+(λ,λ)) GA on OneMax.",
     "The parameters are:",
-    "  --from     <int>: the minimum power of two for the problem size",
-    "  --to       <int>: the maximum power of two for the problem size",
-    "  --share <double>: the started value of the fixed-target log",
-    "  --runs     <int>: the number of independent runs for each configuration",
-    "  --threads  <int>: the number of threads to use (less than one: all available threads)",
+    "  --n         <int>: the problem size",
+    "  --beta-min  <double>: the minimal beta (the heavy-tailed distribution parameter) to test",
+    "  --beta-max  <double>: the maximal beta to test",
+    "  --beta-step <double>: the step for betas to test",
+    "  --max-dist  <int>: the maximal distance from the optimum treated as a target",
+    "  --runs      <int>: the number of independent runs for each configuration",
+    "  --threads   <int>: the number of threads to use (less than one: all available threads)",
   )
 
-  private class FTLoggerStorage(val problemSize: Int, val algName: String) {
+  private class FTLoggerStorage(val problemSize: Int, val algorithmName: String) {
     private[this] val collector = new AtomicLongArray(problemSize + 1)
     private[this] val collectorSq = new AtomicLongArray(problemSize + 1)
+    private[this] val nEvents = new AtomicLongArray(problemSize + 1)
 
-    def getJsonStrPart(index: Int, runs: Int): String = {
-      val avg = collector.get(index).toDouble / runs
-      s"""{"n":$problemSize,"algorithm":\"$algName\","runtime":${avg / problemSize}}"""
-    }
-
-    def getStr(index: Int, runs: Int): String = {
-      val avg = collector.get(index).toDouble / runs
-      val std = math.sqrt((collectorSq.get(index).toDouble / runs - avg * avg) * runs / (runs - 1))
-      s"${index.toDouble}\t$avg\t$std"
+    def getResult(index: Int): (Double, Double) = {
+      val sum = collector.get(index).toDouble
+      val sumSq = collectorSq.get(index).toDouble
+      val n = nEvents.get(index).toDouble
+      val avg = sum / n
+      val std = math.sqrt((sumSq / n - avg * avg) * n / (n - 1))
+      (avg, std)
     }
 
     def incCollections(minFitness: Int, maxFitness: Int, ev: Long): Unit = {
       for (index <- minFitness to maxFitness) {
         collector.getAndAdd(index, ev)
         collectorSq.getAndAdd(index, ev * ev)
+        nEvents.incrementAndGet(index)
       }
     }
   }
@@ -61,99 +63,51 @@ object FixedTargetLambda extends Main.Module {
     }
   }
 
-  private class Context(val powers: Range, val betaFrom: Double, val betaTo: Double, val share: Double, val nRuns: Int, nThreads: Int) {
-    def run(fun: (Executor[Unit], Int) => Array[FTLoggerStorage]): Array[Array[FTLoggerStorage]] = {
-      var loggers = new Array[Array[FTLoggerStorage]](0)
+  private class Context(n: Int, nRuns: Int, nThreads: Int) {
+    def run(fun: (Executor[Unit], Int) => Unit): Unit = {
       Using.resource(new ParallelExecutor[Unit](nThreads)) { scheduler =>
         val multiplexer = new Multiplexer(scheduler, nRuns)
-        for (p <- powers) {
-          loggers :+= fun(multiplexer, 1 << p)
-        }
+        fun(multiplexer, n)
       }
-      loggers
     }
   }
 
   override def moduleMain(args: Array[String]): Unit = {
-    runForSqrt(parseContext(args))
-  }
-
-  private def DumpJsonPart(result_loggers: Array[Array[FTLoggerStorage]], algorithms: Seq[String],
-                           func: Int => Int,
-                           runs: Int, prefix: String): Unit = {
-    Using.resource(new PrintWriter(s"part_jsons/part_$prefix.json")) { out => {
-      out.print("[")
-      var is_first = true
-      for (i <- algorithms.indices) {
-        for (loggers <- result_loggers) {
-          val cur_logger = loggers(i)
-          val ft_value = cur_logger.problemSize - func(cur_logger.problemSize)
-          if (!is_first) {
-            out.print(",")
-          } else {
-            is_first = false
-          }
-          out.println(cur_logger.getJsonStrPart(ft_value, runs))
-        }
-      }
-      out.println("]")
-    }}
-  }
-
-  private def runForSqrt(context: Context): Unit = {
-    val algorithms = for (value <- context.betaFrom to context.betaTo by 0.05d) yield {
-      println(s"Fix beta = $value")
-      s"pow($value)" -> createOnePlusLambdaLambdaGA(powerLawLambda(value.toDouble), 'R', "RL", 'C', 'D')
-    }
-
-    val alg_names = algorithms.map(obj => obj._1)
-    val done_tasks = new AtomicInteger(0)
-    val total_tasks = context.nRuns * algorithms.length * context.powers.length
-
-    val fts_funcs = Seq(
-      "sqrt(n)" -> ((n: Int) => math.sqrt(n.toDouble).ceil.toInt),
-      "sqrt^3(n)" -> ((n: Int) => math.pow(n.toDouble, 1.0 / 3).ceil.toInt),
-      "ln(n)" -> ((n: Int) => math.log(n.toDouble).ceil.toInt),
-      "sqrt(n)ln(n)" -> ((n: Int) => (math.sqrt(n.toDouble) * math.log(n.toDouble)).ceil.toInt),
-      "sqrt(n ln(n))" -> ((n: Int) => math.sqrt(math.log(n.toDouble) * n).ceil.toInt),
+    runForManyTargets(parseContext(args),
+      args.getOption("--beta-min").toDouble to
+      args.getOption("--beta-max").toDouble by
+      args.getOption("--beta-step").toDouble,
+      args.getOption("--max-dist").toInt
     )
+  }
 
-    val result_loggers = context.run { (scheduler, n) =>
-      var loggers = new Array[FTLoggerStorage](0)
+  private def runForManyTargets(context: Context, betaValues: Seq[BigDecimal], maxDistance: Int): Unit = {
+    val algorithms = for (value <- betaValues) yield {
+      val algo = createOnePlusLambdaLambdaGA(powerLawLambda(value.toDouble), 'R', "RL", 'C', 'D')
+      ("%.02f".formatLocal(Locale.US, value), algo)
+    }
+
+    val loggerBuffer = IndexedSeq.newBuilder[FTLoggerStorage]
+
+    context.run { (scheduler, n) =>
       for ((name, alg) <- algorithms) {
-        val ft_logger = new FTLoggerStorage(n, name)
+        val logger = new FTLoggerStorage(n, name)
+        loggerBuffer += logger
         scheduler addTask {
-          val res = alg.optimize(new OneMax(n, 0), new FixedTargetLogger(ft_logger))
-          println(s"Finished algo $name, problem size $n, time $res")
-
-          val done = done_tasks.incrementAndGet()
-          if (done % 10 == 0) {
-            println(s"Done: ${100.0 * done.toDouble / total_tasks}% ($done out of $total_tasks)")
-          }
-        }
-        loggers :+= ft_logger
-        println(s"Algorithm $name pushed to queue")
-      }
-      println(s"Finished scheduling, loggers size ${loggers.length}, problem size $n")
-      loggers
-    }
-
-    println(s"Finished processing, result loggers size ${result_loggers.length}")
-
-    for (i <- algorithms.indices) {
-      for (loggers <- result_loggers) {
-        val cur_logger = loggers(i)
-        Using.resource(new PrintWriter(s"data/${algorithms(i)._1}_${cur_logger.problemSize}.dat")) { out =>
-          out.println(s"${cur_logger.problemSize}\t${context.nRuns}")
-          for (ft_value <- 0 to cur_logger.problemSize) {
-            out.println(cur_logger.getStr(ft_value, context.nRuns))
-          }
+          alg.optimize(new OneMax(n, 0), new FixedTargetLogger(logger))
         }
       }
     }
 
-    for ((name, func) <- fts_funcs) {
-      DumpJsonPart(result_loggers, alg_names, func, context.nRuns, name)
+    val loggers = loggerBuffer.result().sortBy(_.algorithmName)
+    println(loggers
+      .map(l => s"m${l.algorithmName},d${l.algorithmName}")
+      .mkString("k,", ",", ""))
+    for (pow <- 0 to 30; dist = 1 << pow; if dist <= maxDistance) {
+      println(loggers
+        .map(l => l.getResult(l.problemSize - dist) match {
+          case (a, b) => s"$a,$b"
+        }).mkString(s"$dist,", ",", ""))
     }
   }
 
@@ -167,11 +121,8 @@ object FixedTargetLambda extends Main.Module {
   }
 
   private def parseContext(args: Array[String]): Context = new Context(
-    powers   = args.getOption("--from").toInt to args.getOption("--to").toInt,
-    betaFrom = args.getOption("--bfrom").toDouble,
-    betaTo   = args.getOption("--bto").toDouble,
-    share    = args.getOption("--share").toDouble,
+    n        = args.getOption("--n").toInt,
     nRuns    = args.getOption("--runs").toInt,
-    nThreads = args.getOption("--threads").toInt
+    nThreads = args.getOption("--threads").toInt,
   )
 }
