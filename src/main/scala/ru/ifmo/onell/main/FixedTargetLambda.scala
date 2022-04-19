@@ -1,23 +1,22 @@
 package ru.ifmo.onell.main
 
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.{IterationLogger, Main}
-import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.{createOnePlusLambdaLambdaGA, defaultOneFifthLambda, fixedLogTowerLambda, logCappedOneFifthLambda, powerLawLambda}
-import ru.ifmo.onell.problem.OneMax
-import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutorFT}
-
 import java.io.PrintWriter
-import java.util.concurrent.atomic
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLongArray}
+
 import scala.language.postfixOps
 import scala.math.BigDecimal.double2bigDecimal
 import scala.util.Using
 
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.{createOnePlusLambdaLambdaGA, powerLawLambda}
+import ru.ifmo.onell.problem.OneMax
+import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutorFT}
+import ru.ifmo.onell.{IterationLogger, Main}
+
 object FixedTargetLambda extends Main.Module {
   override def name: String = "ft-lambda"
-  override def shortDescription: String = "Runs experiments about fixed-target performance of the (1 + (λ, λ)) GA"
+  override def shortDescription: String = "Runs experiments about fixed-target performance of the (1+(λ,λ)) GA"
   override def longDescription: Seq[String] = Seq(
-    "Runs experiments about fixed-target performance of the (1 + (λ, λ)) GA on OneMax.",
+    "Runs experiments about fixed-target performance of the (1+(λ,λ)) GA on OneMax.",
     "The parameters are:",
     "  --from     <int>: the minimum power of two for the problem size",
     "  --to       <int>: the maximum power of two for the problem size",
@@ -38,12 +37,11 @@ object FixedTargetLambda extends Main.Module {
 
     def getJsonStrPart(index: Int, runs: Int): String = {
       val avg = collector.get(index).toDouble / runs
-      val std = math.sqrt((collectorSq.get(index).toDouble / runs - avg * avg) * runs / (runs - 1))
       s"""{"n":$problemSize,"algorithm":\"$algName\","runtime":${avg / problemSize}}"""
     }
 
     def getJsonDerStr(index: Int, runs: Int): String = {
-      val index_prev = index// if (index == 0) index else index - 1
+      val index_prev = index
       val index_next = if (index == problemSize) index else index + 1
       val diff = index_next - index_prev
 
@@ -60,7 +58,7 @@ object FixedTargetLambda extends Main.Module {
     }
 
     def getTexDerStr(index: Int, runs: Int): String = {
-      val index_prev = if (index == 0) index else index - 1
+      val index_prev = if (index == 0) 0 else index - 1
       val index_next = if (index == problemSize) index else index + 1
       val diff = index_next - index_prev
 
@@ -76,9 +74,9 @@ object FixedTargetLambda extends Main.Module {
       s"${index.toDouble}\t$avg\t$std"
     }
 
-    def incCollections(index: Int, ev: Long, sqev: Long): Unit = {
+    def incCollections(index: Int, ev: Long): Unit = {
       collector.getAndAdd(index, ev)
-      collectorSq.getAndAdd(index, sqev)
+      collectorSq.getAndAdd(index, ev * ev)
     }
   }
 
@@ -88,13 +86,12 @@ object FixedTargetLambda extends Main.Module {
     override def logIteration(evaluations: Long, fitness: Int): Unit = {
       if (evaluations == 1) {
           for (i <- 0 to fitness) {
-            storage.incCollections(i, 1, 1)
+            storage.incCollections(i, 1)
           }
           lastFitness = fitness
       } else if (fitness > lastFitness) {
-        val ev2 = evaluations * evaluations
         for (i <- lastFitness + 1 to fitness) {
-          storage.incCollections(i, evaluations, ev2)
+          storage.incCollections(i, evaluations)
         }
         lastFitness = fitness
       }
@@ -139,8 +136,8 @@ object FixedTargetLambda extends Main.Module {
     }
   }
 
-  private def DumpJson(loggers: Array[FTLoggerStorage], algorithms: Seq[String], start: Int, grain: Int, runs: Int, prefix: String, use_derivative: Boolean): Unit = {
-    Using.resource(new PrintWriter(s"jsons/${prefix}_${loggers.last.problemSize}.json")) { json_out => {
+  private def DumpJson(loggers: Array[FTLoggerStorage], start: Int, grain: Int, runs: Int, prefix: String, use_derivative: Boolean): Unit = {
+    Using.resource(new PrintWriter(s"jsons/${prefix}_${loggers.last.problemSize}.json")) { json_out =>
       json_out.print("[")
       var is_first: Boolean = true
       for (i <- loggers.indices) {
@@ -162,7 +159,6 @@ object FixedTargetLambda extends Main.Module {
         }
       }
       json_out.println("]")
-    }
     }
   }
 
@@ -189,16 +185,9 @@ object FixedTargetLambda extends Main.Module {
   }
 
   private def runForSqrt(context: Context): Unit = {
-    var algorithms = new Array[(String, OnePlusLambdaLambdaGA)](0)
-
-    val values = context.beta_from to context.beta_to by 0.05d toArray
-
-    for (value <- values) {
-      println(s"Fix beta = ${value}")
-    }
-
-    for (value <- values) {
-      algorithms :+= s"pow(${value})" -> createOnePlusLambdaLambdaGA(powerLawLambda(value.toDouble), 'R', "RL", 'C', 'D')
+    val algorithms = for (value <- context.beta_from to context.beta_to by 0.05d) yield {
+      println(s"Fix beta = $value")
+      s"pow($value)" -> createOnePlusLambdaLambdaGA(powerLawLambda(value.toDouble), 'R', "RL", 'C', 'D')
     }
 
     val alg_names = algorithms.map(obj => obj._1)
@@ -219,7 +208,7 @@ object FixedTargetLambda extends Main.Module {
         val ft_logger = new FTLoggerStorage(n, name)
         scheduler addTask {
           val res = alg.optimize(new OneMax(n, 0), new FixedTargetLogger(ft_logger))
-          println(s"Finished algo ${name}, problem size ${n}, time ${res}")
+          println(s"Finished algo $name, problem size $n, time $res")
 
           val done = done_tasks.incrementAndGet()
           if (done % 10 == 0) {
@@ -227,9 +216,9 @@ object FixedTargetLambda extends Main.Module {
           }
         }
         loggers :+= ft_logger
-        println(s"Algorithm ${name} pushed to queue")
+        println(s"Algorithm $name pushed to queue")
       }
-      println(s"Finished scheduling, loggers size ${loggers.length}, problem size ${n}")
+      println(s"Finished scheduling, loggers size ${loggers.length}, problem size $n")
       loggers
     }
 
@@ -249,7 +238,7 @@ object FixedTargetLambda extends Main.Module {
     }
 
     for ((name, func) <- fts_funcs) {
-      DumpJsonPart(result_loggers, alg_names.toIndexedSeq, func, context.nRuns, name)
+      DumpJsonPart(result_loggers, alg_names, func, context.nRuns, name)
     }
   }
 
@@ -296,9 +285,9 @@ object FixedTargetLambda extends Main.Module {
           }
         }
         loggers :+= ft_logger
-        println(s"Algorithm ${name} pushed to queue")
+        println(s"Algorithm $name pushed to queue")
       }
-      println(s"Finished scheduling, loggers size ${loggers.length}, problem size ${n}")
+      println(s"Finished scheduling, loggers size ${loggers.length}, problem size $n")
       loggers
     }
 
@@ -323,14 +312,14 @@ object FixedTargetLambda extends Main.Module {
       val start = (loggers.last.problemSize * context.share).ceil.toInt
       DumpTex(loggers, alg_names, start, 1000, context.nRuns, "ft_runtime", false)
 
-      DumpJson(loggers, alg_names, start_def, 1000, context.nRuns, "full_runtime", false)
-      DumpJson(loggers, alg_names, start, 1000, context.nRuns, "ft_runtime", false)
+      DumpJson(loggers, start_def, 1000, context.nRuns, "full_runtime", false)
+      DumpJson(loggers, start, 1000, context.nRuns, "ft_runtime", false)
 
       DumpTex(loggers, alg_names, start_def, 2000, context.nRuns, "der_runtime", true)
       DumpTex(loggers, alg_names, start, 2000, context.nRuns, "der_ft", true)
 
-      DumpJson(loggers, alg_names, start_def, 2000, context.nRuns, "der_runtime", true)
-      DumpJson(loggers, alg_names, start, 2000, context.nRuns, "der_ft", true)
+      DumpJson(loggers, start_def, 2000, context.nRuns, "der_runtime", true)
+      DumpJson(loggers, start, 2000, context.nRuns, "der_ft", true)
     }
   }
 
