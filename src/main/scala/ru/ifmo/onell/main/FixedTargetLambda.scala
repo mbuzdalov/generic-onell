@@ -94,7 +94,7 @@ object FixedTargetLambda extends Main.Module {
         val logger = new FTLoggerStorage(n, name)
         loggerBuffer += logger
         scheduler addTask {
-          alg.optimize(new OneMax(n, 0), new FixedTargetLogger(logger))
+          alg.optimize(new OneMax(n), new FixedTargetLogger(logger))
         }
       }
     }
