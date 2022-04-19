@@ -1,5 +1,6 @@
 package ru.ifmo.onell.main
 
+import java.io.PrintWriter
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLongArray
 
@@ -18,13 +19,14 @@ object FixedTargetLambda extends Main.Module {
   override def longDescription: Seq[String] = Seq(
     "Runs experiments about fixed-target performance of the heavy-tailed (1+(λ,λ)) GA on OneMax.",
     "The parameters are:",
-    "  --n         <int>: the problem size",
+    "  --n            <int>: the problem size",
     "  --beta-min  <double>: the minimal beta (the heavy-tailed distribution parameter) to test",
     "  --beta-max  <double>: the maximal beta to test",
     "  --beta-step <double>: the step for betas to test",
-    "  --max-dist  <int>: the maximal distance from the optimum treated as a target",
-    "  --runs      <int>: the number of independent runs for each configuration",
-    "  --threads   <int>: the number of threads to use (less than one: all available threads)",
+    "  --max-dist     <int>: the maximal distance from the optimum treated as a target",
+    "  --runs         <int>: the number of independent runs for each configuration",
+    "  --threads      <int>: the number of threads to use (less than one: all available threads)",
+    "  --out     <filename>: the output filename to place the results"
   )
 
   private class FTLoggerStorage(val problemSize: Int, val algorithmName: String) {
@@ -77,11 +79,12 @@ object FixedTargetLambda extends Main.Module {
       args.getOption("--beta-min").toDouble to
       args.getOption("--beta-max").toDouble by
       args.getOption("--beta-step").toDouble,
-      args.getOption("--max-dist").toInt
+      args.getOption("--max-dist").toInt,
+      args.getOption("--out")
     )
   }
 
-  private def runForManyTargets(context: Context, betaValues: Seq[BigDecimal], maxDistance: Int): Unit = {
+  private def runForManyTargets(context: Context, betaValues: Seq[BigDecimal], maxDistance: Int, out: String): Unit = {
     val algorithms = for (value <- betaValues) yield {
       val algo = createOnePlusLambdaLambdaGA(powerLawLambda(value.toDouble), 'R', "RL", 'C', 'D')
       ("%.02f".formatLocal(Locale.US, value), algo)
@@ -100,14 +103,16 @@ object FixedTargetLambda extends Main.Module {
     }
 
     val loggers = loggerBuffer.result().sortBy(_.algorithmName)
-    println(loggers
-      .map(l => s"m${l.algorithmName},d${l.algorithmName}")
-      .mkString("k,", ",", ""))
-    for (pow <- 0 to 30; dist = 1 << pow; if dist <= maxDistance) {
-      println(loggers
-        .map(l => l.getResult(l.problemSize - dist) match {
-          case (a, b) => s"$a,$b"
-        }).mkString(s"$dist,", ",", ""))
+    Using.resource(new PrintWriter(out)) { pw =>
+      pw.println(loggers
+                .map(l => s"m${l.algorithmName},d${l.algorithmName}")
+                .mkString("k,", ",", ""))
+      for (pow <- 0 to 30; dist = 1 << pow; if dist <= maxDistance) {
+        pw.println(loggers
+                  .map(l => l.getResult(l.problemSize - dist) match {
+                    case (a, b) => s"$a,$b"
+                  }).mkString(s"$dist,", ",", ""))
+      }
     }
   }
 
