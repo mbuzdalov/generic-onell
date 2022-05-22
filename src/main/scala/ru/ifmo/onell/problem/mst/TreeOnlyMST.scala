@@ -113,8 +113,8 @@ object TreeOnlyMST {
       edgeOrder.swap(indexInChosen, indexInNonChosen)
       val eIn = edges(edgeOrder(indexInChosen))
       val eOut = edges(edgeOrder(indexInNonChosen))
-      graph.removeEdge(eOut)
       graph.addEdge(eIn)
+      graph.removeEdge(eOut)
       chosenWeight -= eOut.weight
       chosenWeight += eIn.weight
     }
