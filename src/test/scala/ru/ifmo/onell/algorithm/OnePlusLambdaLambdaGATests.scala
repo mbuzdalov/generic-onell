@@ -5,7 +5,10 @@ import scala.Ordering.Double.IeeeOrdering
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import ru.ifmo.onell.HasIndividualOperations
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.problem.mst.TreeOnlyMST
+import ru.ifmo.onell.problem.mst.util.NaiveDynamicGraph
 import ru.ifmo.onell.problem.{OneMax, OneMaxPerm, RandomPlanted3SAT}
 
 class OnePlusLambdaLambdaGATests extends AnyFlatSpec with Matchers {
@@ -57,6 +60,24 @@ class OnePlusLambdaLambdaGATests extends AnyFlatSpec with Matchers {
     val found = runs.sum.toDouble / runs.size
     found should (be <= 1900.0)
     found should (be >= 1300.0)
+  }
+
+  it should "perform as expected on the tree-only MST problem (lambda <= 2 ln n)" in {
+    val rng = new java.util.Random(872454326413212L)
+    val mst = TreeOnlyMST.randomGraph(256, 512, 1, 2, new java.util.Random(rng.nextLong()), NaiveDynamicGraph)
+    implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
+    val optimizer = createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D')
+    val runtimes = (0 until 5).map(_ => optimizer.optimize(mst))
+    runtimes.count(v => v >= 100000 && v <= 250000) should (be >= 4)
+  }
+
+  it should "perform as expected on the tree-only MST problem (lambda = 10)" in {
+    val rng = new java.util.Random(872454326413212L)
+    val mst = TreeOnlyMST.randomGraph(256, 512, 1, 2, new java.util.Random(rng.nextLong()), NaiveDynamicGraph)
+    implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
+    val optimizer = createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D')
+    val runtimes = (0 until 5).map(_ => optimizer.optimize(mst))
+    runtimes.count(v => v >= 80000 && v <= 180000) should (be >= 4)
   }
 
   it should "log improvements correctly" in {
