@@ -3,9 +3,10 @@ package ru.ifmo.onell.problem.mst.util;
 import java.util.*;
 
 /**
- * Implementation of dynamic connectivity based on a hierarchy of partial forests.
- *
+ * <p>Implementation of dynamic connectivity based on a hierarchy of partial forests.</p>
+ * <p>
  * Source: <a href="https://github.com/Aksenov239/concurrent-graph/blob/master/src/sequential/SequentialDynamicGraph.java">Aksenov239/concurrent-graph</a>.
+ * </p>
  *
  * @author Vitaly Aksenov
  */
