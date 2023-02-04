@@ -24,6 +24,13 @@ trait HasIndividualOperations[MutableIndividual] {
     * @param rng the random number generator.
     */
   def initializeRandomly(individual: MutableIndividual, rng: Random): Unit
+
+  /**
+    * Copies one individual into another one.
+    * @param source the individual whose contents are copied.
+    * @param destination the individual which receives the contents.
+    */
+  def copy(source: MutableIndividual, destination: MutableIndividual): Unit
 }
 
 /**

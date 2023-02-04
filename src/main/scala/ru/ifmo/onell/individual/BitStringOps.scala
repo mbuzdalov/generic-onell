@@ -22,4 +22,6 @@ object BitStringOps extends HasIndividualOperations[Array[Boolean]] {
       i += 1
     }
   }
+  override def copy(source: Array[Boolean], destination: Array[Boolean]): Unit =
+    System.arraycopy(source, 0, destination, 0, source.length)
 }

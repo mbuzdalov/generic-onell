@@ -11,6 +11,8 @@ final class Permutation private (data: Array[Int]) {
     data(a) = data(b)
     data(b) = tmp
   }
+
+  def copyTo(destination: Permutation): Unit = System.arraycopy(data, 0, destination.data, 0, data.length)
 }
 
 object Permutation {
