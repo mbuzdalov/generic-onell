@@ -50,6 +50,9 @@ class OneMaxPerm(val problemSize: Int)
       i -= 1
     }
   }
+
+  override def fillDelta(from: Permutation, to: Permutation, destination: OrderedSet[Long]): Unit =
+    throw new UnsupportedOperationException("Finding differences between permutations is not yet supported")
 }
 
 object OneMaxPerm {

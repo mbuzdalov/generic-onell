@@ -26,7 +26,10 @@ class OneMax(val problemSize: Int)
     newFitness
   }
 
-  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit = Helpers.flipEachBit(ind, delta)
+  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit =
+    Helpers.flipEachBit(ind, delta)
+  override def fillDelta(from: Array[Boolean], to: Array[Boolean], destination: OrderedSet[Int]): Unit =
+    Helpers.findDifferingBits(from, to, destination)
 
   override def evaluateAssumingDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: Int): Int =
     currentFitness + Helpers.countChanges(ind, delta)

@@ -51,6 +51,9 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge], factory: DynamicGraph
     }
   }
 
+  override def fillDelta(from: Individual, to: Individual, destination: OrderedSet[Long]): Unit =
+    throw new UnsupportedOperationException("Finding differences in TreeOnlyMST is not yet supported")
+
   override def createStorage(problemSize: Int): Individual = new Individual(nVertices, internalEdges, penalty, factory)
   override def initializeRandomly(individual: Individual, rng: ThreadLocalRandom): Unit = individual.initializeRandomly(rng)
 }
@@ -122,7 +125,7 @@ object TreeOnlyMST {
     def fitness(): Long = chosenWeight + penaltyForComponent * (graph.nConnectivityComponents - 1)
   }
 
-  def solveMST(nVertices: Int, edges: IndexedSeq[Edge]): (Long, Int) = {
+  private def solveMST(nVertices: Int, edges: IndexedSeq[Edge]): (Long, Int) = {
     val ds = new DisjointSet(nVertices)
     val sortedEdges = edges.sortBy(_.weight)
     var weight = 0L

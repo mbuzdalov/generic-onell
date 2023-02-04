@@ -31,6 +31,18 @@ object Helpers {
     changes
   }
 
+  def findDifferingBits(from: Array[Boolean], to: Array[Boolean], destination: OrderedSet[Int]): Unit = {
+    var i = 0
+    val size = from.length
+    destination.clear()
+    while (i < size) {
+      if (from(i) != to(i)) {
+        destination.add(i)
+      }
+      i += 1
+    }
+  }
+
   def flipEachBit(individual: Array[Boolean], indices: OrderedSet[Int]): Unit = {
     var i = indices.size - 1
     while (i >= 0) {

@@ -43,7 +43,10 @@ class LinearRandomIntegerWeights(val problemSize: Int, val maxWeight: Int, rando
     newFitness
   }
 
-  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit = Helpers.flipEachBit(ind, delta)
+  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit =
+    Helpers.flipEachBit(ind, delta)
+  override def fillDelta(from: Array[Boolean], to: Array[Boolean], destination: OrderedSet[Int]): Unit =
+    Helpers.findDifferingBits(from, to, destination)
 
   override def evaluateAssumingDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: Long): Long = {
     val size = delta.size

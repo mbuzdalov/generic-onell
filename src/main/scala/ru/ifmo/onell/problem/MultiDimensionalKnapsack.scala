@@ -7,7 +7,7 @@ import java.util.zip.GZIPInputStream
 import scala.util.Using
 
 import ru.ifmo.onell.{Fitness, HasIndividualOperations}
-import ru.ifmo.onell.util.OrderedSet
+import ru.ifmo.onell.util.{Helpers, OrderedSet}
 import MultiDimensionalKnapsack._
 
 class MultiDimensionalKnapsack(bitDefinitions: Array[BitDefinition], weightLimits: Array[Int], val linearRelaxation: Double)
@@ -42,6 +42,7 @@ class MultiDimensionalKnapsack(bitDefinitions: Array[BitDefinition], weightLimit
     ind.fitness
   }
   override def unapplyDelta(ind: Individual, delta: OrderedSet[Int]): Unit = applyDelta(ind, delta, ind.fitness)
+  override def fillDelta(from: Individual, to: Individual, dest: OrderedSet[Int]): Unit = from.diff(to, dest)
 
   // individual operations are a part of the problem due to greedy initialization
   override def createStorage(problemSize: Int): Individual = new Individual(problemSize)
@@ -78,7 +79,7 @@ object MultiDimensionalKnapsack {
   }
 
   final class Individual(problemSize: Int) {
-    private[this] val bits = new Array[Boolean](problemSize)
+    private val bits = new Array[Boolean](problemSize)
     private[this] var cost, nViolatedConstraints = 0
     private[this] var weights: Array[Int] = _
 
@@ -120,6 +121,9 @@ object MultiDimensionalKnapsack {
         }
       }
     }
+
+    def diff(that: Individual, destination: OrderedSet[Int]): Unit =
+      Helpers.findDifferingBits(bits, that.bits, destination)
   }
 
   lazy val ChuBeaselyProblems: Seq[MultiDimensionalKnapsack] = {
@@ -134,7 +138,7 @@ object MultiDimensionalKnapsack {
     }
   }
 
-  def parseProblems(relaxationLineReader: BufferedReader)(stream: InputStream): Seq[MultiDimensionalKnapsack] = {
+  private def parseProblems(relaxationLineReader: BufferedReader)(stream: InputStream): Seq[MultiDimensionalKnapsack] = {
     val reader = new IntReader(stream)
     val nProblems = reader.nextInt()
     Seq.fill(nProblems)(parseProblem(reader, relaxationLineReader))

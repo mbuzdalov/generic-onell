@@ -88,6 +88,17 @@ trait Fitness[IndividualType, @specialized(fs) FitnessType, @specialized(cs) Cha
   def unapplyDelta(ind: IndividualType, delta: OrderedSet[ChangeIndexType]): Unit
 
   /**
+    * Creates a delta from two individuals: the "from-individual" and the "to-individual".
+    * If the resulting delta is applied to this individual, the result shall be identical to the to-individual.
+    * The result should be stored in the `destination` set.
+    *
+    * @param from the from-individual.
+    * @param to the to-individual.
+    * @param destination the destination to store the delta.
+    */
+  def fillDelta(from: IndividualType, to: IndividualType, destination: OrderedSet[ChangeIndexType]): Unit
+
+  /**
     * Evaluates the given individual, assuming the delta is applied.
     * The individual shall retain in the original state after applying this operation,
     * although it may be modified during the computation.

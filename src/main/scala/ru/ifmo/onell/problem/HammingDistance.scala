@@ -43,5 +43,8 @@ object HammingDistance {
       val newFitness = problem.evaluateAssumingDelta(ind, delta, currentFitness.fitness)
       new FAHD(newFitness, newDistance)
     }
+
+    override def fillDelta(from: Array[Boolean], to: Array[Boolean], destination: OrderedSet[Int]): Unit =
+      Helpers.findDifferingBits(from, to, destination)
   }
 }

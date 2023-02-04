@@ -92,7 +92,10 @@ class RandomPlanted3SAT(val problemSize: Int, val clauseCount: Int,
     currentFitness - satBefore + countSatisfiedClauses(ind)
   }
 
-  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit = Helpers.flipEachBit(ind, delta)
+  override def unapplyDelta(ind: Array[Boolean], delta: OrderedSet[Int]): Unit =
+    Helpers.flipEachBit(ind, delta)
+  override def fillDelta(from: Array[Boolean], to: Array[Boolean], destination: OrderedSet[Int]): Unit =
+    Helpers.findDifferingBits(from, to, destination)
 
   private def countSatisfiedClauses(individual: Array[Boolean]): Int = {
     var f = 0

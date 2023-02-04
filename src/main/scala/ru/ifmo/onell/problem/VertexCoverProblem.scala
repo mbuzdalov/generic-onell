@@ -8,7 +8,7 @@ import org.jgrapht.alg.vertexcover.RecursiveExactVCImpl
 import org.jgrapht.graph.DefaultUndirectedGraph
 
 import ru.ifmo.onell.problem.VertexCoverProblem.Individual
-import ru.ifmo.onell.util.OrderedSet
+import ru.ifmo.onell.util.{Helpers, OrderedSet}
 import ru.ifmo.onell.{Fitness, HasIndividualOperations}
 
 class VertexCoverProblem(val nVertices: Int, edges: Seq[(Int, Int)], val optimum: Long)
@@ -45,6 +45,8 @@ class VertexCoverProblem(val nVertices: Int, edges: Seq[(Int, Int)], val optimum
     unapplyDelta(ind, delta)
     ind.fitness
   }
+  override def fillDelta(from: Individual, to: Individual, dest: OrderedSet[Int]): Unit = from.diff(to, dest)
+
   override def unapplyDelta(ind: Individual, delta: OrderedSet[Int]): Unit = {
     var i = delta.size
     while (i > 0) {
@@ -94,10 +96,13 @@ object VertexCoverProblem {
   }
 
   class Individual(nVertices: Int, nEdges: Int) {
-    private[this] val selected = new Array[Boolean](nVertices)
+    private val selected = new Array[Boolean](nVertices)
     private[this] var nSelectedVertices, nCoveredEdges: Int = 0
 
     def fitness: Long = (nEdges - nCoveredEdges).toLong * nVertices + nSelectedVertices
+
+    def diff(that: Individual, destination: OrderedSet[Int]): Unit =
+      Helpers.findDifferingBits(selected, that.selected, destination)
 
     def flip(vertex: Int, adjacentVertices: Array[Array[Int]]): Unit = {
       val myAdjacent = adjacentVertices(vertex)
