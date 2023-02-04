@@ -1,12 +1,12 @@
 lazy val commonSettings = Seq(
   organization := "ru.ifmo",
   libraryDependencies ++= Seq(scalaTest, jacksonCore, jGraphT),
-  scalaVersion := "2.13.8",
+  scalaVersion := "2.13.10",
   scalacOptions ++= Seq("-deprecation"),
   fork := true
 )
 
-lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.12" % Test
+lazy val scalaTest  = "org.scalatest" %% "scalatest" % "3.2.15" % Test
 lazy val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % "2.13.5"
 lazy val jGraphT = "org.jgrapht" % "jgrapht-core" % "1.5.1" // used for solving vertex covers
 
