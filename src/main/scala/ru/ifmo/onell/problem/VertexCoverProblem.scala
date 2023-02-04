@@ -46,7 +46,7 @@ class VertexCoverProblem(val nVertices: Int, edges: Seq[(Int, Int)], val optimum
     ind.fitness
   }
   override def fillDelta(from: Individual, to: Individual, dest: OrderedSet[Int]): Unit = from.diff(to, dest)
-
+  override def copy(source: Individual, destination: Individual): Unit = source.copyTo(destination)
   override def unapplyDelta(ind: Individual, delta: OrderedSet[Int]): Unit = {
     var i = delta.size
     while (i > 0) {
@@ -97,9 +97,15 @@ object VertexCoverProblem {
 
   class Individual(nVertices: Int, nEdges: Int) {
     private val selected = new Array[Boolean](nVertices)
-    private[this] var nSelectedVertices, nCoveredEdges: Int = 0
+    private var nSelectedVertices, nCoveredEdges: Int = 0
 
     def fitness: Long = (nEdges - nCoveredEdges).toLong * nVertices + nSelectedVertices
+
+    def copyTo(that: Individual): Unit = {
+      System.arraycopy(selected, 0, that.selected, 0, selected.length)
+      that.nSelectedVertices = nSelectedVertices
+      that.nCoveredEdges = nCoveredEdges
+    }
 
     def diff(that: Individual, destination: OrderedSet[Int]): Unit =
       Helpers.findDifferingBits(selected, that.selected, destination)

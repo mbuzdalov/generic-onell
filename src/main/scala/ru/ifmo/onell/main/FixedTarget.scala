@@ -169,5 +169,7 @@ object FixedTarget extends Main.Module {
   private object ZeroBooleanOps extends HasIndividualOperations[Array[Boolean]] {
     override def createStorage(problemSize: Int): Array[Boolean] = new Array(problemSize)
     override def initializeRandomly(individual: Array[Boolean], rng: ThreadLocalRandom): Unit = {}
+    override def copy(source: Array[Boolean], destination: Array[Boolean]): Unit =
+      System.arraycopy(source, 0, destination, 0, source.length)
   }
 }

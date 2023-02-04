@@ -70,6 +70,8 @@ class MultiDimensionalKnapsack(bitDefinitions: Array[BitDefinition], weightLimit
       }
     }
   }
+
+  override def copy(source: Individual, destination: Individual): Unit = source.copyTo(destination)
 }
 
 object MultiDimensionalKnapsack {
@@ -80,10 +82,17 @@ object MultiDimensionalKnapsack {
 
   final class Individual(problemSize: Int) {
     private val bits = new Array[Boolean](problemSize)
-    private[this] var cost, nViolatedConstraints = 0
-    private[this] var weights: Array[Int] = _
+    private var cost, nViolatedConstraints = 0
+    private var weights: Array[Int] = _
 
     def fitness: Int = if (nViolatedConstraints > 0) 0 else cost
+
+    def copyTo(that: Individual): Unit = {
+      System.arraycopy(bits, 0, that.bits, 0, bits.length)
+      that.cost = cost
+      that.nViolatedConstraints = nViolatedConstraints
+      that.weights = weights
+    }
 
     def flip(index: Int, bitDefinitions: Array[BitDefinition], weightLimits: Array[Int]): Unit = {
       if (weights == null) {

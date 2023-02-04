@@ -53,6 +53,8 @@ class TreeOnlyMST(nVertices: Int, edges: IndexedSeq[Edge], factory: DynamicGraph
 
   override def fillDelta(from: Individual, to: Individual, destination: OrderedSet[Long]): Unit =
     throw new UnsupportedOperationException("Finding differences in TreeOnlyMST is not yet supported")
+  override def copy(source: Individual, destination: Individual): Unit =
+    throw new UnsupportedOperationException("Copying of individuals in TreeOnlyMST is not yet supported")
 
   override def createStorage(problemSize: Int): Individual = new Individual(nVertices, internalEdges, penalty, factory)
   override def initializeRandomly(individual: Individual, rng: ThreadLocalRandom): Unit = individual.initializeRandomly(rng)

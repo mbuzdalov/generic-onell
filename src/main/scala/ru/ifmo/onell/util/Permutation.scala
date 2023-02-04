@@ -2,7 +2,7 @@ package ru.ifmo.onell.util
 
 import java.util.Random
 
-final class Permutation private (data: Array[Int]) {
+final class Permutation private (private val data: Array[Int]) {
   def apply(index: Int): Int = data(index)
   def size: Int = data.length
 
