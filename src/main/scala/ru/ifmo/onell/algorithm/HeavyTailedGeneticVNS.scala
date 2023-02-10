@@ -15,13 +15,21 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
                             crossoverDistanceSelectionBeta: Double) extends Optimizer {
   case class FitInd[I, @sp(fsp) F](i: I, f: F)
 
-  class SortedVector[T](beta: Double)(implicit ord: Ordering[T]) {
+  class SortedVector[T](beta: Double, limit: Int)(implicit ord: Ordering[T]) {
     private[this] val data = new ArrayBuffer[T]()
     private[this] val prefixSums = new ArrayBuffer[Double]()
 
     def add(elem: T): Unit = {
+      var i = data.size
       data.addOne(elem)
-      if (data.size == 1) {
+      while (i > 0 && ord.lteq(data(i - 1), elem)) {
+        data.update(i, data(i - 1))
+        i -= 1
+      }
+      data.update(i, elem)
+      if (data.size > limit) {
+        data.remove(data.size - 1)
+      } else if (data.size == 1) {
         prefixSums.addOne(1.0)
       } else {
         prefixSums.addOne(prefixSums.last + math.pow(data.size, -beta))
@@ -40,34 +48,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
       while (prefixSums(index) < value) {
         index += 1
       }
-      var left = 0
-      var right = data.size - 1
-      while (left != right) {
-        assert(left <= index && index <= right)
-        val pivotValue = data((left + right) >>> 1)
-        var i = left
-        var j = right
-        while (i <= j) {
-          while (ord.gt(data(i), pivotValue)) i += 1
-          while (ord.lt(data(j), pivotValue)) j -= 1
-          if (i <= j) {
-            val tmp = data(i)
-            data.update(i, data(j))
-            data.update(j, tmp)
-            i += 1
-            j -= 1
-          }
-        }
-        if (index <= j) {
-          right = j
-        } else if (index >= i) {
-          left = i
-        } else {
-          // break
-          left = right
-        }
-      }
-      data(index)
+      get(index)
     }
   }
 
@@ -85,7 +66,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
     implicit val fitIndOrdering: Ordering[FitInd[I, F]] = (x: FitInd[I, F], y: FitInd[I, F]) => fitness.compare(x.f, y.f)
 
     class Population {
-      private[this] val population = new SortedVector[FitInd[I, F]](mutantParentSelectionBeta)
+      private[this] val population = new SortedVector[FitInd[I, F]](mutantParentSelectionBeta, Int.MaxValue)
       private[this] val pairs = new ArrayBuffer[SortedVector[(FitInd[I, F], FitInd[I, F])]]()
       private[this] val pairBetas = new ArrayBuffer[Double]()
       private[this] var bestFitness: F = _
@@ -109,7 +90,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
             val distance = distances(i)
             assert(distance > 0)
             while (pairs.size < distance) {
-              pairs.addOne(new SortedVector(crossoverPairSelectionBeta))
+              pairs.addOne(new SortedVector(crossoverPairSelectionBeta, 10))
               if (pairBetas.isEmpty) {
                 pairBetas.addOne(1.0)
               } else {
@@ -117,6 +98,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
               }
             }
             pairs(distance - 1).add((theInd, population.get(i)))
+            pairs(distance - 1).add((population.get(i), theInd))
           })
           population.add(theInd)
           true
