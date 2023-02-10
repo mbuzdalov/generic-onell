@@ -3,12 +3,12 @@ package ru.ifmo.onell.main
 import java.util.concurrent.ThreadLocalRandom
 import java.util.{Locale, Random}
 
+import ru.ifmo.onell.algorithm.{HeavyTailedGeneticVNS, OnePlusOneEA}
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
 import ru.ifmo.onell.problem.RandomPlanted3SAT._
+import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
 import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp}
-import ru.ifmo.onell.{Fitness, HasIndividualOperations, IterationLogger, Main, Optimizer}
+import ru.ifmo.onell._
 
 object FixedBudget extends Main.Module {
   override def name: String = "fixed-budget"
@@ -86,7 +86,8 @@ object FixedBudget extends Main.Module {
                                                       crossoverStrength = "RL",
                                                       goodMutantStrategy = 'C',
                                                       populationRounding = 'D')),
-    )
+    ("heavy-tailed vns", _ => new HeavyTailedGeneticVNS(2.5, 1.5, 2.5, 1.5)),
+  )
 
   private def runHardSat(problemSizes: Seq[Int]): Unit = {
     def nClausesFun(problemSize: Int) = (problemSize * 4.27).toInt

@@ -9,7 +9,7 @@ import scala.jdk.CollectionConverters._
 import scala.util.Using
 
 import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
+import ru.ifmo.onell.algorithm.{HeavyTailedGeneticVNS, OnePlusLambdaLambdaGA, OnePlusOneEA}
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
@@ -167,6 +167,7 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ=12" -> createOnePlusLambdaLambdaGA(fixedLambda(12), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ=fixed optimal" -> createOnePlusLambdaLambdaGA(fixedLogTowerLambda, 'R', "RL", 'C', 'D'),
+      "Heavy-Tailed VNS" -> new HeavyTailedGeneticVNS(2.5, 1.5, 2.5, 1.5),
     )
 
     context.run { (scheduler, n) =>
@@ -740,6 +741,9 @@ object RunningTimes extends Main.Module {
         }
       }
     }
+
+    override def copy(source: Array[Boolean], destination: Array[Boolean]): Unit =
+      System.arraycopy(source, 0, destination, 0, source.length)
   }
 
   private def parseContext(args: Array[String]): Context = new Context(
