@@ -16,22 +16,11 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
   case class FitInd[I, @sp(fsp) F](i: I, f: F)
 
   class SortedVector[T](beta: Double)(implicit ord: Ordering[T]) {
-    private[this] var data: Vector[T] = Vector.empty
+    private[this] val data = new ArrayBuffer[T]()
     private[this] val prefixSums = new ArrayBuffer[Double]()
 
     def add(elem: T): Unit = {
-      var l = -1
-      var r = data.size
-      while (r - l > 1) {
-        val m = (l + r) >>> 1
-        if (ord.gt(data(m), elem)) {
-          l = m
-        } else {
-          r = m
-        }
-      }
-      val (dl, dr) = data.splitAt(r)
-      data = (dl :+ elem) ++ dr
+      data.addOne(elem)
       if (data.size == 1) {
         prefixSums.addOne(1.0)
       } else {
@@ -39,7 +28,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
       }
     }
 
-    def map[U](function: T => U): Vector[U] = data.map(function)
+    def map[U](function: T => U): ArrayBuffer[U] = data.map(function)
 
     def size: Int = data.size
 
@@ -47,11 +36,38 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
 
     def sample(rng: ThreadLocalRandom): T = {
       val value = rng.nextDouble(prefixSums.last)
-      var i = 0
-      while (prefixSums(i) < value) {
-        i += 1
+      var index = 0
+      while (prefixSums(index) < value) {
+        index += 1
       }
-      get(i)
+      var left = 0
+      var right = data.size - 1
+      while (left != right) {
+        assert(left <= index && index <= right)
+        val pivotValue = data((left + right) >>> 1)
+        var i = left
+        var j = right
+        while (i <= j) {
+          while (ord.gt(data(i), pivotValue)) i += 1
+          while (ord.lt(data(j), pivotValue)) j -= 1
+          if (i <= j) {
+            val tmp = data(i)
+            data.update(i, data(j))
+            data.update(j, tmp)
+            i += 1
+            j -= 1
+          }
+        }
+        if (index <= j) {
+          right = j
+        } else if (index >= i) {
+          left = i
+        } else {
+          // break
+          left = right
+        }
+      }
+      data(index)
     }
   }
 
@@ -120,10 +136,7 @@ class HeavyTailedGeneticVNS(mutantParentSelectionBeta: Double,
             chosenIndex += 1
           }
         } while (pairs(chosenIndex).size == 0)
-        val result = pairs(chosenIndex).sample(rng)
-        fitness.fillDelta(result._1.i, result._2.i, spareDiffSpace1)
-        assert(spareDiffSpace1.size == chosenIndex + 1, s"${spareDiffSpace1.size} != ${chosenIndex + 1}")
-        result
+        pairs(chosenIndex).sample(rng)
       }
     }
 
