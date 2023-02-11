@@ -91,7 +91,7 @@ object MultiDimensionalKnapsack {
       System.arraycopy(bits, 0, that.bits, 0, bits.length)
       that.cost = cost
       that.nViolatedConstraints = nViolatedConstraints
-      that.weights = weights
+      that.weights = weights.clone()
     }
 
     def flip(index: Int, bitDefinitions: Array[BitDefinition], weightLimits: Array[Int]): Unit = {
