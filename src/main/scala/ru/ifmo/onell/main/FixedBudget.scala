@@ -3,12 +3,13 @@ package ru.ifmo.onell.main
 import java.util.concurrent.ThreadLocalRandom
 import java.util.{Locale, Random}
 
+import ru.ifmo.onell.algorithm.OnePlusOneEA
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
-import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
+import ru.ifmo.onell.distribution.PowerLawDistribution
 import ru.ifmo.onell.problem.RandomPlanted3SAT._
+import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
 import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp}
-import ru.ifmo.onell.{Fitness, HasIndividualOperations, IterationLogger, Main, Optimizer}
+import ru.ifmo.onell._
 
 object FixedBudget extends Main.Module {
   override def name: String = "fixed-budget"
@@ -66,6 +67,7 @@ object FixedBudget extends Main.Module {
   private val optimizers: IndexedSeq[(String, TerminationConditionTracker[Int] => Optimizer)] = IndexedSeq(
     ("(1+1) EA aware", _ => OnePlusOneEA.Resampling),
     ("(1+1) EA unaware", _ => OnePlusOneEA.Standard),
+    ("(1+1) EA aware heavy", _ => new OnePlusOneEA(n => PowerLawDistribution(n, 1.9))),
     ("uncapped unaware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(defaultOneFifthLambda),
                                                           mutationStrength = 'S',
                                                           crossoverStrength = "SL",
@@ -86,7 +88,12 @@ object FixedBudget extends Main.Module {
                                                       crossoverStrength = "RL",
                                                       goodMutantStrategy = 'C',
                                                       populationRounding = 'D')),
-    )
+    ("heavy aware", t => createOnePlusLambdaLambdaGA(t.attachedTuning(powerLawLambda(2.9)),
+                                                      mutationStrength = 'R',
+                                                      crossoverStrength = "RL",
+                                                      goodMutantStrategy = 'C',
+                                                      populationRounding = 'D')),
+  )
 
   private def runHardSat(problemSizes: Seq[Int]): Unit = {
     def nClausesFun(problemSize: Int) = (problemSize * 4.27).toInt
