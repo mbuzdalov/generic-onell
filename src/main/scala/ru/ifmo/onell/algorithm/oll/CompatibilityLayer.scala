@@ -140,12 +140,12 @@ object CompatibilityLayer {
     implicit def hd2shiftD(@unused dummy: "HD"): CrossoverStrength = ShiftD
   }
 
-  sealed abstract class GoodMutantStrategy private (val incrementForTriedQueries: Int, val incrementForTestedQueries: Int)
+  sealed trait GoodMutantStrategy
   object GoodMutantStrategy {
-    case object Ignore extends GoodMutantStrategy(1, 1)
-    case object SkipCrossover extends GoodMutantStrategy(1, 1)
-    case object DoNotCountIdentical extends GoodMutantStrategy(1, 0)
-    case object DoNotSampleIdentical extends GoodMutantStrategy(0, 0)
+    case object Ignore extends GoodMutantStrategy
+    case object SkipCrossover extends GoodMutantStrategy
+    case object DoNotCountIdentical extends GoodMutantStrategy
+    case object DoNotSampleIdentical extends GoodMutantStrategy
 
     implicit def i2ignore(@unused dummy: 'I'): Ignore.type = Ignore
     implicit def s2skip(@unused dummy: 'S'): SkipCrossover.type = SkipCrossover
