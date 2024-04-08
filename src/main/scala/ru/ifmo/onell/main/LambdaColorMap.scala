@@ -80,11 +80,15 @@ object LambdaColorMap extends Main.Module {
 
   private class HammingImprovementStatistics(val size: Int) {
     private[this] val hammingCounts, hammingIncrements = new Array[Long](size + 1)
+    private[this] val countIncrements = new Array[Long](6)
 
     def consume(distance: Int, evaluations: Long, increment: Long): Unit = synchronized {
       hammingCounts(distance) += evaluations
       hammingIncrements(distance) += increment
+      countIncrements(math.min(5, increment).toInt) += 1
     }
+
+    def incrementStats: String = s"1: ${countIncrements(1)}, 2: ${countIncrements(2)}, 3: ${countIncrements(3)}, 4: ${countIncrements(4)}, 5+: ${countIncrements(5)}"
 
     def extract(target: Array[Double]): Unit =
       for (i <- 1 until target.length)
@@ -218,7 +222,7 @@ object LambdaColorMap extends Main.Module {
 
         executor.invokeAll((0 until runs).map(_ => newCallable()).asJava).forEach(_.get())
         logger.extract(arrays(lambdaGen))
-        println(s"[$file]: lambda $lambda done")
+        println(s"[$file]: lambda $lambda done, improvement stats: ${logger.incrementStats}")
       }
 
       raw.println(s"lambda power $lambdaPower")
