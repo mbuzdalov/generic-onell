@@ -208,34 +208,6 @@ object CompatibilityLayer {
   def defaultOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _.toDouble)(size)
   def logCappedOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1.0))(size)
 
-  def modifiedOneFifthLambda(onSuccess: Double, onFailure: Double, threshold: Long => Double)(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] var value, baseValue = 1.0
-    private[this] val maxValue = threshold(size)
-    private[this] var continuousFailedIterations, delta = 0L
-
-    override def lambda(rng: Random): Double = value
-    override def notifyChildIsBetter(budgetSpent: Long): Unit = {
-      continuousFailedIterations = 0
-      delta = 10
-      value = math.min(maxValue, math.max(1, value * onSuccess))
-      baseValue = value
-    }
-    override def notifyChildIsEqual(budgetSpent: Long): Unit = notifyChildIsWorse(budgetSpent)
-    override def notifyChildIsWorse(budgetSpent: Long): Unit = {
-      continuousFailedIterations += 1
-      if (continuousFailedIterations == delta) {
-        delta += 1
-        continuousFailedIterations = 0
-      }
-      value = math.min(maxValue, math.max(1, baseValue * math.pow(onFailure, continuousFailedIterations.toDouble)))
-    }
-  }
-
-  def modifiedOneFifthLambda(size: Long): LambdaTuning =
-    modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _.toDouble)(size)
-  def logCappedModifiedOneFifthLambda(size: Long): LambdaTuning =
-    modifiedOneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1.0))(size)
-
   case class ConstantTuning(mutationProbabilityQuotient: Double,
                             crossoverProbabilityQuotient: Double,
                             crossoverPopulationSizeQuotient: Double)
