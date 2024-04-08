@@ -1,8 +1,11 @@
 package ru.ifmo.onell.main
 
-import java.io.PrintWriter
-import java.util.concurrent.{Callable, Executors, TimeUnit}
+import java.awt.image.BufferedImage
+import java.io.{File, PrintWriter}
+import java.util.concurrent.{Callable, Executors, ThreadLocalRandom, TimeUnit}
 import java.util.{Locale, Random}
+
+import javax.imageio.ImageIO
 
 import scala.jdk.CollectionConverters._
 import scala.util.Using
@@ -10,10 +13,11 @@ import scala.Ordering.Double.TotalOrdering
 
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.distribution.BinomialDistribution
 import ru.ifmo.onell.main.util.AlgorithmCodeNames
 import ru.ifmo.onell.problem.HammingDistance._
 import ru.ifmo.onell.problem.{LinearRandomIntegerWeights, OneMaxPerm, RandomPlanted3SAT}
-import ru.ifmo.onell.util.Specialization
+import ru.ifmo.onell.util.{Specialization, Viridis}
 import ru.ifmo.onell.{Fitness, IterationLogger, Main}
 
 object LambdaColorMap extends Main.Module {
@@ -47,7 +51,15 @@ object LambdaColorMap extends Main.Module {
     "             --lambda-power <double>: the multiplicative step for λ to use",
     "             --tuning       <tuning>: the tuning(s) to use",
     "             --out-prefix   <string>: the filename prefix to use",
-    ""
+    "  perm:om2 <options>: runs the bi-parametric experiments for OneMax on permutations.",
+    "        Options are:",
+    "             --n            <int>: the problem size",
+    "             --runs         <int>: the number of runs for each λ",
+    "             --max-lambda   <double>: the maximum λ to use",
+    "             --lambda-power <double>: the multiplicative step for λ to use",
+    "             --max-ell      <double>: the maximum L to use",
+    "             --ell-power    <double>: the multiplicative step for L to use",
+    "             --out-dir      <string>: the output directory to contain the data",
   ) ++ AlgorithmCodeNames.parserDescriptionForOnePlusLambdaLambdaGenerators("--tuning")
 
   override def moduleMain(args: Array[String]): Unit = args(0) match {
@@ -76,6 +88,15 @@ object LambdaColorMap extends Main.Module {
         maxLambda = args.getOption("--max-lambda").toDouble,
         tuningMask = args.getOption("--tuning"),
         filePrefix = args.getOption("--out-prefix"))
+    case "perm:om2" =>
+      collect4DPlotsPerm(
+        n = args.getOption("--n").toInt,
+        runs = args.getOption("--runs").toInt,
+        lambdaPower = args.getOption("--lambda-power").toDouble,
+        maxLambda = args.getOption("--max-lambda").toDouble,
+        ellPower = args.getOption("--ell-power").toDouble,
+        maxEll = args.getOption("--max-ell").toDouble,
+        outDir = args.getOption("--out-dir"))
   }
 
   private class HammingImprovementStatistics(val size: Int) {
@@ -249,6 +270,76 @@ object LambdaColorMap extends Main.Module {
                                  tuningMask: String, filePrefix: String): Unit =
     for ((algFun, code) <- AlgorithmCodeNames.parseOnePlusLambdaLambdaGenerators(tuningMask))
       collect3DPlotsPerm(algFun, n, runs, lambdaPower, maxLambda, s"$filePrefix-$code")
+
+  private def samplePopSize(value: Double, rng: ThreadLocalRandom): Int = {
+    val floor = math.floor(value).toInt
+    val ceil = math.ceil(value).toInt
+    if (floor == ceil || rng.nextDouble() < value - floor) ceil else floor
+  }
+
+  private class MyParamController(nChanges: Long, lambda: Double, ell: Double) extends OnePlusLambdaLambdaGA.ParameterController {
+    private val ellDistribution = BinomialDistribution.resampling(nChanges, ell / nChanges)
+    override def getParameters(rng: ThreadLocalRandom): OnePlusLambdaLambdaGA.IterationParameters = {
+      val nOfChanges = ellDistribution.sample(rng)
+      val crossDist = BinomialDistribution.resampling(nOfChanges, 1 / nOfChanges)
+      OnePlusLambdaLambdaGA.IterationParameters(firstPopulationSize = samplePopSize(lambda, rng),
+                                                secondPopulationSize = samplePopSize(ell, rng),
+                                                numberOfChangesInEachMutant = nOfChanges,
+                                                numberOfChangesInCrossoverOffspring = crossDist.sample(rng))
+    }
+    override def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit = {}
+  }
+
+  private def collect4DPlotsPerm(n: Int, runs: Int, lambdaPower: Double, maxLambda: Double,
+                                 ellPower: Double, maxEll: Double, outDir: String): Unit = {
+    val executor = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors())
+    val maxLambdaIndex = 1 + (math.log(maxLambda) / math.log(lambdaPower)).toInt
+    val maxEllIndex = 1 + (math.log(maxEll) / math.log(ellPower)).toInt
+    val arrays = Array.ofDim[Double](maxLambdaIndex, maxEllIndex, n + 1)
+
+    for {
+      lambdaGen <- 0 until maxLambdaIndex
+      ellGen <- 0 until maxEllIndex
+    } {
+      val lambda = math.pow(lambdaPower, lambdaGen)
+      val ell = math.pow(ellPower, ellGen)
+      val fun = new OneMaxPerm(n)
+      val oll = new OnePlusLambdaLambdaGA(nChanges => new MyParamController(nChanges, lambda, ell), OnePlusLambdaLambdaGA.BehaviorForGoodMutant.SkipCrossover)
+      val logger = new HammingImprovementStatistics(n)
+
+      def newCallable(): Callable[Unit] = () => oll.optimize(fun, new PermImprovementCollector(logger))
+
+      executor.invokeAll((0 until runs).map(_ => newCallable()).asJava).forEach(_.get())
+      logger.extract(arrays(lambdaGen)(ellGen))
+      println(s"Config done: lambda $lambda (${lambdaGen + 1} / $maxLambdaIndex), ell $ell (${ellGen + 1} / $maxEllIndex)")
+    }
+
+    val outDistanceFmt = s"%0${n.toString.length}d"
+    new File(outDir).mkdirs()
+    for (distance <- 2 to n) {
+      val distanceStr = outDistanceFmt.format(distance)
+      val map = Array.tabulate(maxLambdaIndex, maxEllIndex)((i, j) => arrays(i)(j)(distance))
+      val max = map.view.map(_.max).max
+      Using.resources(new PrintWriter(s"$outDir/$distanceStr.raw"), new PrintWriter(s"$outDir/$distanceStr.scl")) { (raw, scl) =>
+        raw.println(s"lambda power $lambdaPower")
+        raw.println(s"ell power $ellPower")
+        for (m <- map) raw.println(m.view.map(to3dPlotNumber).mkString(" "))
+
+        scl.println(s"lambda power $lambdaPower")
+        scl.println(s"ell power $ellPower")
+        for (m <- map) scl.println(m.view.map(v => to3dPlotNumber(v / max)).mkString(" "))
+
+        val img = new BufferedImage(maxLambdaIndex, maxEllIndex, BufferedImage.TYPE_INT_RGB)
+        for (i <- 0 until maxLambdaIndex; j <- 0 until maxEllIndex) {
+          img.setRGB(i, maxEllIndex - 1 - j, Viridis(map(i)(j) / max))
+        }
+        ImageIO.write(img, "png", new File(s"$outDir/$distanceStr.png"))
+      }
+    }
+
+    executor.shutdown()
+    executor.awaitTermination(365, TimeUnit.DAYS)
+  }
 
   private implicit class Options(val args: Array[String]) extends AnyVal {
     def getOption(option: String): String = {
