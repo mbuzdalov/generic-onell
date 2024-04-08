@@ -2,7 +2,7 @@ package ru.ifmo.onell.algorithm.oll
 
 import java.util.concurrent.{ThreadLocalRandom => Random}
 
-import scala.annotation.tailrec
+import scala.annotation.{tailrec, unused}
 import scala.language.implicitConversions
 
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
@@ -97,9 +97,9 @@ object CompatibilityLayer {
       if (lower == upper || rng.nextDouble() < upper - fpValue) lower else upper
     }
 
-    implicit def u2alwaysUp(dummy: 'U'): PopulationSizeRounding = AlwaysUp
-    implicit def d2alwaysDown(dummy: 'D'): PopulationSizeRounding = AlwaysDown
-    implicit def p2probabilistic(dummy: 'P'): PopulationSizeRounding = Probabilistic
+    implicit def u2alwaysUp(@unused dummy: 'U'): PopulationSizeRounding = AlwaysUp
+    implicit def d2alwaysDown(@unused dummy: 'D'): PopulationSizeRounding = AlwaysDown
+    implicit def p2probabilistic(@unused dummy: 'P'): PopulationSizeRounding = Probabilistic
   }
 
   trait MutationStrength {
@@ -111,9 +111,9 @@ object CompatibilityLayer {
     final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution.resampling(n, l / n)
     final val Shift: MutationStrength = (n, l) => BinomialDistribution.shift(n, l / n)
 
-    implicit def s2standard(dummy: 'S'): MutationStrength = Standard
-    implicit def r2resampling(dummy: 'R'): MutationStrength = Resampling
-    implicit def h2shift(dummy: 'H'): MutationStrength = Shift
+    implicit def s2standard(@unused dummy: 'S'): MutationStrength = Standard
+    implicit def r2resampling(@unused dummy: 'R'): MutationStrength = Resampling
+    implicit def h2shift(@unused dummy: 'H'): MutationStrength = Shift
   }
 
   trait CrossoverStrength {
@@ -132,12 +132,12 @@ object CompatibilityLayer {
     final val ShiftL:      CrossoverStrength = (l, d, q) => shift(d, standardize(q / l))
     final val ShiftD:      CrossoverStrength = (_, d, q) => shift(d, standardize(q / max(d, 1)))
 
-    implicit def sl2standardL(dummy: "SL"): CrossoverStrength = StandardL
-    implicit def sd2standardD(dummy: "SD"): CrossoverStrength = StandardD
-    implicit def rl2resamplingL(dummy: "RL"): CrossoverStrength = ResamplingL
-    implicit def rd2resamplingD(dummy: "RD"): CrossoverStrength = ResamplingD
-    implicit def hl2shiftL(dummy: "HL"): CrossoverStrength = ShiftL
-    implicit def hd2shiftD(dummy: "HD"): CrossoverStrength = ShiftD
+    implicit def sl2standardL(@unused dummy: "SL"): CrossoverStrength = StandardL
+    implicit def sd2standardD(@unused dummy: "SD"): CrossoverStrength = StandardD
+    implicit def rl2resamplingL(@unused dummy: "RL"): CrossoverStrength = ResamplingL
+    implicit def rd2resamplingD(@unused dummy: "RD"): CrossoverStrength = ResamplingD
+    implicit def hl2shiftL(@unused dummy: "HL"): CrossoverStrength = ShiftL
+    implicit def hd2shiftD(@unused dummy: "HD"): CrossoverStrength = ShiftD
   }
 
   sealed abstract class GoodMutantStrategy private (val incrementForTriedQueries: Int, val incrementForTestedQueries: Int)
@@ -147,10 +147,10 @@ object CompatibilityLayer {
     case object DoNotCountIdentical extends GoodMutantStrategy(1, 0)
     case object DoNotSampleIdentical extends GoodMutantStrategy(0, 0)
 
-    implicit def i2ignore(dummy: 'I'): Ignore.type = Ignore
-    implicit def s2skip(dummy: 'S'): SkipCrossover.type = SkipCrossover
-    implicit def c2doNotCount(dummy: 'C'): DoNotCountIdentical.type = DoNotCountIdentical
-    implicit def m2doNotSample(dummy: 'M'): DoNotSampleIdentical.type = DoNotSampleIdentical
+    implicit def i2ignore(@unused dummy: 'I'): Ignore.type = Ignore
+    implicit def s2skip(@unused dummy: 'S'): SkipCrossover.type = SkipCrossover
+    implicit def c2doNotCount(@unused dummy: 'C'): DoNotCountIdentical.type = DoNotCountIdentical
+    implicit def m2doNotSample(@unused  dummy: 'M'): DoNotSampleIdentical.type = DoNotSampleIdentical
   }
 
   trait LambdaTuning {
