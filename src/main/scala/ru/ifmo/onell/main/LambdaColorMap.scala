@@ -281,7 +281,7 @@ object LambdaColorMap extends Main.Module {
     private val ellDistribution = BinomialDistribution.resampling(nChanges, ell / nChanges)
     override def getParameters(rng: ThreadLocalRandom): OnePlusLambdaLambdaGA.IterationParameters = {
       val nOfChanges = ellDistribution.sample(rng)
-      val crossDist = BinomialDistribution.resampling(nOfChanges, 1 / nOfChanges)
+      val crossDist = BinomialDistribution.resampling(nOfChanges, 1.0 / nOfChanges)
       OnePlusLambdaLambdaGA.IterationParameters(firstPopulationSize = samplePopSize(lambda, rng),
                                                 secondPopulationSize = samplePopSize(ell, rng),
                                                 numberOfChangesInEachMutant = nOfChanges,
