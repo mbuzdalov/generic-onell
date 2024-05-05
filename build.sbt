@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   organization := "ru.ifmo",
   libraryDependencies ++= Seq(scalaTest, jacksonCore, jGraphT),
-  scalaVersion := "2.13.13",
+  scalaVersion := "2.13.14",
   scalacOptions ++= Seq("-deprecation"),
   fork := true
 )
