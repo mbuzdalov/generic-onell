@@ -616,7 +616,7 @@ object RunningTimes extends Main.Module {
     }
   }
 
-  private def treeOnlyMST(context: Context, nInstances: Int, maxWeights: Seq[Int], edgeMultiples: Seq[Int]): Unit = {
+  private def treeOnlyMST(context: Context, nInstances: Int, maxWeights: Array[Int], edgeMultiples: Array[Int]): Unit = {
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
