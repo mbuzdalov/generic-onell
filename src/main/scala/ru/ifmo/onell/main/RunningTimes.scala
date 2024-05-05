@@ -76,8 +76,8 @@ object RunningTimes extends Main.Module {
     case "bits:om"         => bitsOneMaxSimple(parseContext(args))
     case "bits:om:cap"     => bitsOneMaxCapping(parseContext(args))
     case "bits:om:3d"      => threeDistributionsOneMax(parseContext(args))
-    case "bits:om:sqrt"    => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.sqrt(n).toInt))
-    case "bits:om:log"     => bitsOneMaxAlmostOptimal(parseContext(args), n => Seq(math.log(n + 1).toInt))
+    case "bits:om:sqrt"    => bitsOneMaxFromGood(parseContext(args), n => Seq(math.sqrt(n).toInt))
+    case "bits:om:log"     => bitsOneMaxFromGood(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "bits:l2d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 2.0)
     case "bits:l5d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 5.0)
     case "bits:om:lambda"  => bitsParameterTuningLinearInteger(parseContext(args), _ => 1)
@@ -108,7 +108,7 @@ object RunningTimes extends Main.Module {
     case "bits:sat:tuning*" => bitsMaxSatIRacedTuningChoices(parseContext(args), args.getOption("--files"))
     case "bits:om:lin" =>
       val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
-      bitsOneMaxAlmostOptimal(parseContext(args), _ => distances)
+      bitsOneMaxFromGood(parseContext(args), _ => distances)
     case "bits:sat:lin" =>
       val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
       bitsMaxSATAlmostOptimal(parseContext(args), _ => distances)
@@ -199,7 +199,7 @@ object RunningTimes extends Main.Module {
     }
   }
 
-  private def bitsOneMaxAlmostOptimal(context: Context, startValues: Int => Seq[Int]): Unit = {
+  private def bitsOneMaxFromGood(context: Context, startValues: Int => Seq[Int]): Unit = {
     val algorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
@@ -218,7 +218,7 @@ object RunningTimes extends Main.Module {
           implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
           scheduler addTask {
             val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-            s"""{"n":$n,"algorithm":"$name","runtime":$time,"expected initial distance":$sv,"runtime over n":${time.toDouble / n}}"""
+            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / math.sqrt(n * sv)}}"""
           }
         }
       }
