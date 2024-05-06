@@ -215,10 +215,11 @@ object RunningTimes extends Main.Module {
     context.run { (scheduler, n) =>
       for ((name, alg) <- algorithms) {
         for (sv <- startValues(n)) {
+          val normQ = math.sqrt(n.toDouble * sv)
           implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
           scheduler addTask {
             val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / math.sqrt(n * sv)}}"""
+            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
           }
         }
       }
