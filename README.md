@@ -27,6 +27,9 @@ Note that journal versions of conference papers are listed as separate entries.
 * Denis Antipov, Maxim Buzdalov, Benjamin Doerr:
   Lazy parameter tuning and control: choosing all parameters randomly from a power-law distribution.
   GECCO 2021: 1115-1123
+* Anton O. Bassin, Maxim Buzdalov:
+  An Experimental Study of Operator Choices in the (1+(λ,λ)) Genetic Algorithm.
+  MOTOR 2020: 320–335 
 * Anton O. Bassin, Maxim V. Buzdalov, Anatoly A. Shalyto:
   The "One-Fifth Rule" with Rollbacks for Self-Adjustment of the Population Size in the (1+(λ,λ)) Genetic Algorithm.
   Automatic Control and Computer Science 55(7): 885-902 (2021)
