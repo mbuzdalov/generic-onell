@@ -5,7 +5,7 @@ This algorithm, as well as few simpler algorithms typically used in comparisons,
 can now function on search spaces other than bit strings, e.g. permutations,
 or bit strings with cardinality constraints that can be used to encode spanning trees.
 
-## Supported Papers
+## Papers that use this repository
 
 Note that journal versions of conference papers are listed as separate entries.
 
