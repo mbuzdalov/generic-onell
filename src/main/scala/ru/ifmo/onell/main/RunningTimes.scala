@@ -25,42 +25,45 @@ object RunningTimes extends Main.Module {
 
   override def longDescription: Seq[String] = Seq(
     "The following commands run experiments for problems on bit strings:",
-    "  bits:om         <context>: for OneMax",
-    "  bits:om:cap     <context>: same for heavy-tailed algorithms with various capping",
-    "  bits:om:3d      <context>: same for the independent parameter sampling from three distributions",
-    "  bits:om:sqrt    <context>: same but starting at the distance of sqrt(n) from the end",
-    "  bits:om:log     <context>: same but starting at the distance of log(n+1) from the end",
-    "  bits:om:lin     <context>: same but starting at the distance of d from the end, d is passed with --d option",
-    "                             (several values may be passed comma-separated)",
-    "  bits:sat        <context>: same for the MAX-SAT problem with logarithmic density",
-    "  bits:sat:cap    <context>: same for heavy-tailed algorithms with various capping",
-    "  bits:sat:sqrt   <context>: same but starting at the distance of sqrt(n) from the end",
-    "  bits:sat:log    <context>: same but starting at the distance of log(n+1) from the end",
-    "  bits:sat:lin    <context>: same but starting at the distance of d from the end, d is passed with --d option",
-    "                             (several values may be passed comma-separated)",
-    "  bits:om:tuning  <context>: for OneMax with various tuning choices for the (1+(λ,λ)) GA",
-    "  bits:l2d:tuning <context>: same for linear functions with random weights from [1;2]",
-    "  bits:l5d:tuning <context>: same for linear functions with random weights from [1;5]",
-    "  bits:sat:tuning <context>: same for the MAX-SAT problem with logarithmic density",
+    "  bits:om          <context>: for OneMax",
+    "  bits:om:cap      <context>: same for heavy-tailed algorithms with various capping",
+    "  bits:om:3d       <context>: same for the independent parameter sampling from three distributions",
+    "  bits:om:sqrt     <context>: same but starting at the distance of sqrt(n) from the end",
+    "  bits:om:sqrt3da  <context>: same for the independent parameter sampling from three distributions, compared to (1+1) EA",
+    "  bits:om:sqrt3db  <context>: same without (1+1) EA but for more beta combinations",
+    "  bits:om:log      <context>: same but starting at the distance of log(n+1) from the end",
+    "  bits:om:lin      <context>: same but starting at the distance of d from the end, d is passed with --d option",
+    "                              (several values may be passed comma-separated)",
+    "  bits:om:lin*     <context>: same but for the heavy-tailed (1+(λ,λ)) GA with small betas, and λ capped to sqrt(n)",
+    "  bits:sat         <context>: same for the MAX-SAT problem with logarithmic density",
+    "  bits:sat:cap     <context>: same for heavy-tailed algorithms with various capping",
+    "  bits:sat:sqrt    <context>: same but starting at the distance of sqrt(n) from the end",
+    "  bits:sat:log     <context>: same but starting at the distance of log(n+1) from the end",
+    "  bits:sat:lin     <context>: same but starting at the distance of d from the end, d is passed with --d option",
+    "                              (several values may be passed comma-separated)",
+    "  bits:om:tuning   <context>: for OneMax with various tuning choices for the (1+(λ,λ)) GA",
+    "  bits:l2d:tuning  <context>: same for linear functions with random weights from [1;2]",
+    "  bits:l5d:tuning  <context>: same for linear functions with random weights from [1;5]",
+    "  bits:sat:tuning  <context>: same for the MAX-SAT problem with logarithmic density",
     "  bits:om:tuning*  <context> <file1>,<file2>,...: for OneMax with various tuning choices",
-    "                                                 for the (1+(λ,λ)) GA with constants tuned by irace",
+    "                                                  for the (1+(λ,λ)) GA with constants tuned by irace",
     "  bits:l2d:tuning* <context> <file1>,<file2>,...: same for linear functions with random weights from [1;2]",
     "  bits:l5d:tuning* <context> <file1>,<file2>,...: same for linear functions with random weights from [1;5]",
     "  bits:sat:tuning* <context> <file1>,<file2>,...: same for the MAX-SAT problem with logarithmic density",
-    "  bits:l2d:lambda <context>: experiments for lambda tunings for linear functions with random real-valued weights from [1;2]",
-    "  bits:l5d:lambda <context>: same for linear functions with random real-valued weights from [1;5]",
-    "  bits:om:lambda  <context>: same for OneMax",
-    "  bits:l2i:lambda <context>: same for linear functions with random integer weights from [1;2]",
-    "  bits:l5i:lambda <context>: same for linear functions with random integer weights from [1;5]",
-    "  bits:lni:lambda <context>: same for linear functions with random integer weights from [1;n]",
-    "  bits:sat:lambda <context>: same for the MAX-SAT problem with logarithmic density",
-    "  bits:mst-tree   <context>: same for the minimum spanning tree problem with individuals encoding E=V-1 graphs",
-    "  bits:vcp:ps     <context>: same for the vertex cover problem PS (here, --from and --to control actual vertex numbers)",
-    "  bits:vcp:bip    <context>: same for the vertex cover problem on a bipartite graph (here, --from and --to control actual vertex numbers)",
-    "  bits:vcp:rnd    <context> <nInstances>: same for the vertex cover problem on random graphs",
-    "                                          with nInstance instance of each size",
-    "                                          (here, --from and --to control actual vertex numbers)",
-    "  bits:jump:3d    <context>: same for Jump and independent parameter sampling from three distributions",
+    "  bits:l2d:lambda  <context>: experiments for lambda tunings for linear functions with random real-valued weights from [1;2]",
+    "  bits:l5d:lambda  <context>: same for linear functions with random real-valued weights from [1;5]",
+    "  bits:om:lambda   <context>: same for OneMax",
+    "  bits:l2i:lambda  <context>: same for linear functions with random integer weights from [1;2]",
+    "  bits:l5i:lambda  <context>: same for linear functions with random integer weights from [1;5]",
+    "  bits:lni:lambda  <context>: same for linear functions with random integer weights from [1;n]",
+    "  bits:sat:lambda  <context>: same for the MAX-SAT problem with logarithmic density",
+    "  bits:mst-tree    <context>: experiments for the minimum spanning tree problem with individuals encoding E=V-1 graphs",
+    "  bits:vcp:ps      <context>: experiments for the vertex cover problem PS (here, --from and --to control actual vertex numbers)",
+    "  bits:vcp:bip     <context>: same for the vertex cover problem on a bipartite graph (here, --from and --to control actual vertex numbers)",
+    "  bits:vcp:rnd     <context> <nInstances>: same for the vertex cover problem on random graphs",
+    "                                           with nInstance instance of each size",
+    "                                           (here, --from and --to control actual vertex numbers)",
+    "  bits:jump:3d    <context>: experiments for Jump and independent parameter sampling from three distributions",
     "                             (--from and --to control problem size directly)",
     "The following commands run experiments for problems on permutations:",
     "  perm:om         <context>: for the permutation flavour of OneMax",
@@ -77,6 +80,8 @@ object RunningTimes extends Main.Module {
     case "bits:om:cap"     => bitsOneMaxCapping(parseContext(args))
     case "bits:om:3d"      => threeDistributionsOneMax(parseContext(args))
     case "bits:om:sqrt"    => bitsOneMaxFromGood(parseContext(args), n => Seq(math.sqrt(n).toInt))
+    case "bits:om:sqrt3da" => threeDistributionsOneMaxFromGoodA(parseContext(args))
+    case "bits:om:sqrt3db" => threeDistributionsOneMaxFromGoodB(parseContext(args))
     case "bits:om:log"     => bitsOneMaxFromGood(parseContext(args), n => Seq(math.log(n + 1).toInt))
     case "bits:l2d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 2.0)
     case "bits:l5d:lambda" => bitsParameterTuningLinearDouble(parseContext(args), 5.0)
@@ -109,6 +114,9 @@ object RunningTimes extends Main.Module {
     case "bits:om:lin" =>
       val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
       bitsOneMaxFromGood(parseContext(args), _ => distances)
+    case "bits:om:lin*" =>
+      val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
+      bitsOneMaxFromGoodSmallBetas(parseContext(args), _ => distances)
     case "bits:sat:lin" =>
       val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
       bitsMaxSATAlmostOptimal(parseContext(args), _ => distances)
@@ -211,6 +219,27 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ~pow(2.7)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.7), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ~pow(2.9)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
     )
+
+    context.run { (scheduler, n) =>
+      for ((name, alg) <- algorithms) {
+        for (sv <- startValues(n)) {
+          val normQ = math.sqrt(n.toDouble * sv)
+          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
+          scheduler addTask {
+            val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
+            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
+          }
+        }
+      }
+    }
+  }
+
+  private def bitsOneMaxFromGoodSmallBetas(context: Context, startValues: Int => Seq[Int]): Unit = {
+    val algorithms = Seq(
+      "(1+(λ,λ)) GA, λ~pow(1.9)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.9, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(1.7)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.7, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
+      "(1+(λ,λ)) GA, λ~pow(1.5)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.5, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
+      )
 
     context.run { (scheduler, n) =>
       for ((name, alg) <- algorithms) {
@@ -665,6 +694,60 @@ object RunningTimes extends Main.Module {
         scheduler.addTask {
           val time = alg.optimize(new OneMax(n))
           s"""{"n":$n,"betaP":$betaP,"betaC":$betaC,"betaL":$betaL,"runtime":$time}"""
+        }
+      }
+    }
+  }
+
+  private def threeDistributionsOneMaxFromGoodA(context: Context): Unit = {
+    val algorithms = for {
+      betaL <- Seq(2.8)
+      distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
+      betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
+    } yield {
+      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
+      val controller = new ThreeDistributionController(betaPC, betaPC, distLFun)
+      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+    }
+
+    context.run { (scheduler, n) =>
+      val norm = n * math.log(n + 1)
+      for ((betaPC, betaL, alg) <- algorithms) {
+        scheduler.addTask {
+          val sv = math.sqrt(n).toInt
+          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
+          val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
+          s"""{"n":$n,"algo":"1LL","betaPC":$betaPC,"betaL":$betaL,"runtime":$time,"runtime over n log n":${time / norm}}"""
+        }
+      }
+      scheduler.addTask {
+        val alg = OnePlusOneEA.Resampling
+        val sv = math.sqrt(n).toInt
+        implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
+        val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
+        s"""{"n":$n,"algo":"1+1","runtime":$time,"runtime over n log n":${time / norm}}"""
+      }
+    }
+  }
+
+  private def threeDistributionsOneMaxFromGoodB(context: Context): Unit = {
+    val algorithms = for {
+      betaL <- Seq(2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2)
+      distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
+      betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
+    } yield {
+      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
+      val controller = new ThreeDistributionController(betaPC, betaPC, distLFun)
+      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
+    }
+
+    context.run { (scheduler, n) =>
+      for ((betaPC, betaL, alg) <- algorithms) {
+        scheduler.addTask {
+          val sv = math.sqrt(n).toInt
+          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
+          val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
+          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time}"""
         }
       }
     }
