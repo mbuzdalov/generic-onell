@@ -13,9 +13,6 @@ Note that journal versions of conference papers are listed as separate entries.
   Runtime analysis of the (1+(λ,λ)) genetic algorithm on random satisfiable 3-CNF formulas.
   GECCO 2017: 1343-1350
 * Anton O. Bassin, Maxim Buzdalov:
-  The 1/5-th rule with rollbacks: on self-adjustment of the population size in the (1+(λ,λ)) GA.
-  GECCO (Companion) 2019: 277-278
-* Anton O. Bassin, Maxim Buzdalov:
   The (1+(λ,λ)) genetic algorithm for permutations.
   GECCO Companion 2020: 1669-1677
 * Denis Antipov, Maxim Buzdalov, Benjamin Doerr:
@@ -30,9 +27,6 @@ Note that journal versions of conference papers are listed as separate entries.
 * Anton O. Bassin, Maxim Buzdalov:
   An Experimental Study of Operator Choices in the (1+(λ,λ)) Genetic Algorithm.
   MOTOR 2020: 320–335 
-* Anton O. Bassin, Maxim V. Buzdalov, Anatoly A. Shalyto:
-  The "One-Fifth Rule" with Rollbacks for Self-Adjustment of the Population Size in the (1+(λ,λ)) Genetic Algorithm.
-  Automatic Control and Computer Science 55(7): 885-902 (2021)
 * Maxim Buzdalov:
   The (1+(λ,λ)) Genetic Algorithm on the Vertex Cover Problem: Crossover Helps Leaving Plateaus.
   CEC 2022: 1-10
