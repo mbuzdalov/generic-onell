@@ -175,13 +175,13 @@ object FixedBudget extends Main.Module {
     }
   }
 
-  private def runSimpleKnapsack(optimizer: TerminationConditionTracker[Int] => Optimizer, ff: SimpleKnapsack): Int = {
+  private def runSimpleKnapsack(optimizer: Optimizer, ff: SimpleKnapsack): Int = {
     //noinspection NoTailRecursionAnnotation: this one cannot really be tailrec
     def runImpl(budgetRemains: Long, maxSoFar: Int): Int = {
       val tracker = new TerminationConditionTracker[Int](ff, budgetRemains)
       try {
         implicit val individualOps: HasIndividualOperations[problem.SimpleKnapsack.Individual] = ff
-        optimizer(tracker).optimize(ff, tracker)
+        optimizer.optimize(ff, tracker)
         ff.bestFitness
       } catch {
         case BudgetReached(fitness: Int) => ff.max(maxSoFar, fitness)
@@ -194,10 +194,18 @@ object FixedBudget extends Main.Module {
 
   private def runSimpleKnapsack(): Unit = {
     val runsForEach = 30
+
+    val ollGA = createOnePlusLambdaLambdaGA(logCappedOneFifthLambda,
+                                            mutationStrength = 'R',
+                                            crossoverStrength = "RL",
+                                            goodMutantStrategy = 'C',
+                                            populationRounding = 'D')
+
+
     for (kp <- SimpleKnapsack.allProblems) {
       println(s"${kp.name} (max ${kp.bestFitness}):")
-      for ((name, algoGen) <- optimizers) {
-        val results = IndexedSeq.fill(runsForEach)(runSimpleKnapsack(v => algoGen(v), kp))
+      for ((name, algo) <- Seq("(1+1) EA" -> OnePlusOneEA.Resampling, "(1+LL) GA" -> ollGA)) {
+        val results = IndexedSeq.fill(runsForEach)(runSimpleKnapsack(algo, kp))
         val sum = results.map(_.toDouble).sum
         val sumSq = results.map(i => i.toDouble * i).sum
         val avg = sum / runsForEach
