@@ -7,19 +7,20 @@ import ru.ifmo.onell.algorithm.OnePlusOneEA
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.distribution.PowerLawDistribution
 import ru.ifmo.onell.problem.RandomPlanted3SAT._
-import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT}
+import ru.ifmo.onell.problem.{MultiDimensionalKnapsack, RandomPlanted3SAT, SimpleKnapsack}
 import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp}
-import ru.ifmo.onell._
+import ru.ifmo.onell.{problem, _}
 
 object FixedBudget extends Main.Module {
   override def name: String = "fixed-budget"
   override def shortDescription: String = "Runs experiments on expected fitness values given the budget"
   override def longDescription: Seq[String] = Seq(
     "Runs experiments on expected fitness values given the budget.",
-    "The current implementation runs only the (1+(λ,λ)) GA with different tuning approaches for λ",
-    "on hard MAX-SAT instances and the multidimensional knapsack problem.",
+    "The current implementation runs only the (1+1) EA and the (1+(λ,λ)) GA with different tuning approaches for λ",
+    "on hard MAX-SAT instances, the 0-1 knapsack problem and the multidimensional knapsack problem.",
     "Parameters:",
     "  - sat: run the experiment on hard MAX-SAT instances",
+    "  - knapsack: run the experiment on the 0-1 knapsack problem",
     "  - mkp: run the experiment on the multidimensional knapsack problem"
   )
 
@@ -27,6 +28,7 @@ object FixedBudget extends Main.Module {
     Locale.setDefault(Locale.US)
     args(0) match {
       case "sat" => runHardSat((4 to 28).map(v => v * v))
+      case "knapsack" => runSimpleKnapsack()
       case "mkp" => runMultiDimensionalKnapsack()
       case _ => throw new IllegalArgumentException(s"Unknown command for $name: ${args(0)}")
     }
@@ -138,7 +140,7 @@ object FixedBudget extends Main.Module {
     runImpl(10000, 0)
   }
 
-  private def runKnapsack(optimizer: TerminationConditionTracker[Int] => Optimizer, ff: MultiDimensionalKnapsack): Int = {
+  private def runMultidimensionalKnapsack(optimizer: TerminationConditionTracker[Int] => Optimizer, ff: MultiDimensionalKnapsack): Int = {
     //noinspection NoTailRecursionAnnotation: this one cannot really be tailrec
     def runImpl(budgetRemains: Long, maxSoFar: Int): Int = {
       val tracker = new TerminationConditionTracker[Int](ff, budgetRemains)
@@ -164,12 +166,44 @@ object FixedBudget extends Main.Module {
       print("\\addplot+ [draw=none] coordinates {")
       for ((desc, subset) <- knapsacksAndSolutions.groupBy(getDescriptor)) {
         val runsForEach = 10
-        val results = subset.map(p => IndexedSeq.fill(runsForEach)(runKnapsack(optGen, p)).sum / p.linearRelaxation)
+        val results = subset.map(p => IndexedSeq.fill(runsForEach)(runMultidimensionalKnapsack(optGen, p)).sum / p.linearRelaxation)
         val average = results.sum / runsForEach / subset.size
         print(s"({$desc},$average)")
       }
       println("};")
       println(s"\\addlegendentry{$name};")
+    }
+  }
+
+  private def runSimpleKnapsack(optimizer: TerminationConditionTracker[Int] => Optimizer, ff: SimpleKnapsack): Int = {
+    //noinspection NoTailRecursionAnnotation: this one cannot really be tailrec
+    def runImpl(budgetRemains: Long, maxSoFar: Int): Int = {
+      val tracker = new TerminationConditionTracker[Int](ff, budgetRemains)
+      try {
+        implicit val individualOps: HasIndividualOperations[problem.SimpleKnapsack.Individual] = ff
+        optimizer(tracker).optimize(ff, tracker)
+        ff.bestFitness
+      } catch {
+        case BudgetReached(fitness: Int) => ff.max(maxSoFar, fitness)
+        case RestartConditionReached(fitness: Int, evs) => runImpl(budgetRemains - evs, ff.max(maxSoFar, fitness))
+      }
+    }
+
+    runImpl(90000, Int.MinValue)
+  }
+
+  private def runSimpleKnapsack(): Unit = {
+    val runsForEach = 30
+    for (kp <- SimpleKnapsack.allProblems) {
+      println(s"${kp.name} (max ${kp.bestFitness}):")
+      for ((name, algoGen) <- optimizers) {
+        val results = IndexedSeq.fill(runsForEach)(runSimpleKnapsack(v => algoGen(v), kp))
+        val sum = results.map(_.toDouble).sum
+        val sumSq = results.map(i => i.toDouble * i).sum
+        val avg = sum / runsForEach
+        val std = math.sqrt(sumSq / runsForEach - avg * avg) * math.sqrt(runsForEach / (runsForEach - 1.0))
+        println(f"  $name: $avg%.02f +- $std%.02f, max ${results.max}")
+      }
     }
   }
 }
