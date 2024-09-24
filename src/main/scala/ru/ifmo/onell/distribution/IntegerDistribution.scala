@@ -78,7 +78,7 @@ object IntegerDistribution {
   private[this] val cache = Array.tabulate(10)(i => new Constant(i))
 
   def empty: IntegerDistribution = Empty
-  def constant(value: Int): IntegerDistribution =
+  private def constant(value: Int): IntegerDistribution =
     if (value >= 0 && value < cache.length)
       cache(value)
     else new Constant(value)

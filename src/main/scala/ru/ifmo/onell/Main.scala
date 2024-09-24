@@ -25,7 +25,7 @@ object Main {
     }
   }
 
-  object Help extends Main.Module {
+  private object Help extends Main.Module {
     override def name: String = "help"
     override def shortDescription: String = "Prints this help (try help <command> to get help for that command)"
     override def longDescription: Seq[String] = Seq(

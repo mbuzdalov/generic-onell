@@ -63,12 +63,12 @@ trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
   * This companion object contains several known implementations of the `HasDeltaOperations` trait.
   */
 object HasDeltaOperations {
-  object IntSetOps extends HasDeltaOperations[Int] {
+  private object IntSetOps extends HasDeltaOperations[Int] {
     override def createStorage(nChanges: Int): OrderedSet[Int] = new DenseIntSet(nChanges)
     override protected def sampleRandomChangeIndex(nChanges: Int, rng: Random): Int = rng.nextInt(nChanges)
   }
 
-  object LongSetOps extends HasDeltaOperations[Long] {
+  private object LongSetOps extends HasDeltaOperations[Long] {
     override def createStorage(nChanges: Long): OrderedSet[Long] = new SparseLongSet()
     override protected def sampleRandomChangeIndex(nChanges: Long, rng: Random): Long = rng.nextLong(nChanges)
   }

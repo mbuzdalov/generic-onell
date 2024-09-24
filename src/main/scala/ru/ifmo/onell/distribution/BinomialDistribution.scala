@@ -9,17 +9,17 @@ import ru.ifmo.onell.util.BinomialScanner
 object BinomialDistribution {
   def standard(n: Long, p: Double): IntegerDistribution = {
     assert(n * p < Int.MaxValue / 2, s"The product of `n` and `p` is too large (${n * p}), sampling would be infeasible")
-    standard(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we have Long support from IntegerDistribution
+    standard(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we support Long in IntegerDistribution
   }
 
   def shift(n: Long, p: Double): IntegerDistribution = {
     assert(n * p < Int.MaxValue / 2, s"The product of `n` and `p` is too large (${n * p}), sampling would be infeasible")
-    shift(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we have Long support from IntegerDistribution
+    shift(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we support Long in IntegerDistribution
   }
 
   def resampling(n: Long, p: Double): IntegerDistribution = {
     assert(n * p < Int.MaxValue / 2, s"The product of `n` and `p` is too large (${n * p}), sampling would be infeasible")
-    resampling(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we have Long support from IntegerDistribution
+    resampling(if (n > Int.MaxValue) Int.MaxValue else n.toInt, p) // feasible until we support Long in IntegerDistribution
   }
 
   def standard(n: Int, p: Double): IntegerDistribution = {
@@ -193,7 +193,7 @@ object BinomialDistribution {
     override def sample(rng: Random): Int = math.max(1, runScanner(n, scanner.offset(rng) - 1, scanner, rng))
   }
 
-  // Here, for performance reasons, we directly use log1p that has been computed earlier.
+  // Here, for performance reasons, we directly use math.log1p that has been computed earlier.
   // However, this is misleading even if calling this class from tests, so we change the signature in such a tricky way.
   private[distribution] class ResamplingWithScanner private[BinomialDistribution] (n: Int, log1p: Double, anotherN: Int)
     extends IntegerDistribution

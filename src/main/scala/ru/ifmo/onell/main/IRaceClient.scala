@@ -3,7 +3,6 @@ package ru.ifmo.onell.main
 import java.net.{DatagramPacket, DatagramSocket}
 
 import ru.ifmo.onell._
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
 import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, OneMax, RandomPlanted3SAT}
 import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
@@ -195,17 +194,21 @@ object IRaceClient extends Main.Module {
   }
 
   def parseOptimizerJson(optimizerName: String, args: Array[String]): String = {
-    s"""${
-      parseLambdaTuning(args).json
-    },${
-      parseMutationStrength(args).json
-    },${
-      parseCrossoverStrength(args).json
-    },${
-      parseGoodMutantStrategy(args).json
-    },${
-      parseRounding(args).json
-    }"""
+    optimizerName match {
+      case "oll" =>
+        s"""${
+          parseLambdaTuning(args).json
+        },${
+          parseMutationStrength(args).json
+        },${
+          parseCrossoverStrength(args).json
+        },${
+          parseGoodMutantStrategy(args).json
+        },${
+          parseRounding(args).json
+        }"""
+      case _ => throw new IllegalArgumentException(s"Unknown optimizer name '$optimizerName'. Supported names: oll")
+    }
   }
 
   def parseOptimizer(optimizerName: String, args: Array[String]): Optimizer = {

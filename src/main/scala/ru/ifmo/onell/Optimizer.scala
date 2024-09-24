@@ -14,8 +14,8 @@ trait Optimizer {
     * @param iterationLogger the logger to be notified of fitness improvements.
     * @param deltaOps the implicit that explains how to manage representations of individual deltas.
     * @param indOps the implicit that explains how to manage representations of individuals.
-    * @tparam I the type of an individual.
-    * @tparam F the type of a fitness value.
+    * @tparam I the type of individual.
+    * @tparam F the type of fitness value.
     * @tparam C the type of change index of an individual.
     * @return the number of evaluations until an optimum is found.
     */

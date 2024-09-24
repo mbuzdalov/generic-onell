@@ -14,7 +14,7 @@ object HammingDistance {
 
   final class FAHD[@sp(fsp) F](val fitness: F, val distance: Int)
 
-  final class Wrapper[@sp(fsp) F](problem: Fitness[Array[Boolean], F, Int])
+  private final class Wrapper[@sp(fsp) F](problem: Fitness[Array[Boolean], F, Int])
     extends Fitness[Array[Boolean], FAHD[F], Int]
   {
     // Direct delegates

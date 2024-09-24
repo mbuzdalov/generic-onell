@@ -134,7 +134,7 @@ object MultiDimensionalKnapsack {
     }
   }
 
-  def parseProblems(relaxationLineReader: BufferedReader)(stream: InputStream): Seq[MultiDimensionalKnapsack] = {
+  private def parseProblems(relaxationLineReader: BufferedReader)(stream: InputStream): Seq[MultiDimensionalKnapsack] = {
     val reader = new IntReader(stream)
     val nProblems = reader.nextInt()
     Seq.fill(nProblems)(parseProblem(reader, relaxationLineReader))

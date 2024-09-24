@@ -10,21 +10,17 @@ final class DenseIntSet(maxElement: Int) extends OrderedSet[Int] {
 
   override def clear(): Unit = {
     var i = 0
-    val iMax = mySize
-    val cntd = contained
-    val elms = elements
-    while (i < iMax) {
-      cntd(elms(i)) = false
+    while (i < mySize) {
+      contained(elements(i)) = false
       i += 1
     }
     mySize = 0
   }
 
   override def add(element: Int): Unit = {
-    val ei = element.toInt
-    if (!contained(ei)) {
-      contained(ei) = true
-      elements(mySize) = ei
+    if (!contained(element)) {
+      contained(element) = true
+      elements(mySize) = element
       mySize += 1
     }
   }
