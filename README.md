@@ -11,8 +11,7 @@ This project is written in Scala 2 and uses `sbt` as the build system. Any recen
 
 The dependencies are (detailed in `build.sbt` and automatically fetched by `sbt`):
 - `scalatest` for running tests
-- `jackson-core` for some JSON I/O
-- `jgrapht-core` for solving vertex covers
+ `jgrapht-core` for solving vertex covers
 
 The project should run well with Java version 11 and higher.
 
