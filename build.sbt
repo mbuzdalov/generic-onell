@@ -11,5 +11,5 @@ lazy val jGraphT = "org.jgrapht" % "jgrapht-core" % "1.5.3" // used for solving 
 
 lazy val root = project
   .in(file("."))
-  .settings(commonSettings :_*)
+  .settings(commonSettings*)
   .settings(name := "generic-onell", version := "0.0.0")
