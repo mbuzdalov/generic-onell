@@ -1,22 +1,16 @@
 package ru.ifmo.onell.problem
 
-import scala.{specialized => sp}
-
 import ru.ifmo.onell.Fitness
-import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp}
 import ru.ifmo.onell.util.{Helpers, OrderedSet}
 
-object HammingDistance {
-  implicit class Ops[@sp(fsp) F](problem: Fitness[Array[Boolean], F, Int]) {
+object HammingDistance:
+  extension[F] (problem: Fitness[Array[Boolean], F, Int])
     def withHammingDistanceTracking: Fitness[Array[Boolean], FAHD[F], Int] =
       new Wrapper(problem)
-  }
 
-  final class FAHD[@sp(fsp) F](val fitness: F, val distance: Int)
+  final class FAHD[F](val fitness: F, val distance: Int)
 
-  private final class Wrapper[@sp(fsp) F](problem: Fitness[Array[Boolean], F, Int])
-    extends Fitness[Array[Boolean], FAHD[F], Int]
-  {
+  private final class Wrapper[F](problem: Fitness[Array[Boolean], F, Int]) extends Fitness[Array[Boolean], FAHD[F], Int]:
     // Direct delegates
     override def worstFitness: FAHD[F] = new FAHD[F](problem.worstFitness, problem.problemSize + 1)
     override def problemSize: Int = problem.problemSize
@@ -31,17 +25,13 @@ object HammingDistance {
     override def evaluate(individual: Array[Boolean]): FAHD[F] =
       new FAHD(problem.evaluate(individual), problemSize - Helpers.countTrueBits(individual))
 
-    override def applyDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: FAHD[F]): FAHD[F] = {
+    override def applyDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: FAHD[F]): FAHD[F] =
       val newDistance = currentFitness.distance - Helpers.countChanges(ind, delta)
       val newFitness = problem.applyDelta(ind, delta, currentFitness.fitness)
       new FAHD(newFitness, newDistance)
-    }
 
-    override def evaluateAssumingDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: FAHD[F]): FAHD[F] = {
+    override def evaluateAssumingDelta(ind: Array[Boolean], delta: OrderedSet[Int], currentFitness: FAHD[F]): FAHD[F] =
       // if problem does not mutate the individual, this override won't do it as well
       val newDistance = currentFitness.distance - Helpers.countChanges(ind, delta)
       val newFitness = problem.evaluateAssumingDelta(ind, delta, currentFitness.fitness)
       new FAHD(newFitness, newDistance)
-    }
-  }
-}

@@ -4,7 +4,6 @@ import java.util.*;
 
 /**
  * Implementation of dynamic connectivity based on a hierarchy of partial forests.
- *
  * Source: <a href="https://github.com/Aksenov239/concurrent-graph/blob/master/src/sequential/SequentialDynamicGraph.java">Aksenov239/concurrent-graph</a>.
  *
  * @author Vitaly Aksenov
@@ -27,8 +26,7 @@ public final class AksenovDynamicGraph {
         }
 
         public boolean equals(Object o) {
-            if (o instanceof Edge) {
-                Edge e = (Edge) o;
+            if (o instanceof Edge e) {
                 return e.u == u && e.v == v;
             }
             return false;

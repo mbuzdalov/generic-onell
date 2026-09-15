@@ -1,16 +1,16 @@
 package ru.ifmo.onell
 
-import java.util.concurrent.{ThreadLocalRandom => Random}
-
 import ru.ifmo.onell.individual.{BitStringOps, PermutationOps}
 import ru.ifmo.onell.util.Permutation
+
+import java.util.random.RandomGenerator
 
 /**
   * This trait encapsulates the knowledge about basic operations with individuals.
   *
-  * @tparam MutableIndividual the type of an individual.
+  * @tparam MutableIndividual the type of individual.
   */
-trait HasIndividualOperations[MutableIndividual] {
+trait HasIndividualOperations[MutableIndividual]:
   /**
     * Creates a storage for an individual, given the problem size.
     * @param problemSize the problem size.
@@ -23,13 +23,12 @@ trait HasIndividualOperations[MutableIndividual] {
     * @param individual the individual to be initialized.
     * @param rng the random number generator.
     */
-  def initializeRandomly(individual: MutableIndividual, rng: Random): Unit
-}
+  def initializeRandomly(individual: MutableIndividual, rng: RandomGenerator): Unit
+
 
 /**
   * This companion object contains several known implementations of the `HasIndividualOperations` trait.
   */
-object HasIndividualOperations {
+object HasIndividualOperations:
   implicit def forBooleanArray: HasIndividualOperations[Array[Boolean]] = BitStringOps
   implicit def forPermutation: HasIndividualOperations[Permutation] = PermutationOps
-}

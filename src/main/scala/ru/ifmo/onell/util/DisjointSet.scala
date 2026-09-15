@@ -4,48 +4,40 @@ import java.util.{Arrays => JArrays}
 
 import scala.annotation.tailrec
 
-class DisjointSet(n: Int) {
-  private[this] val parent, rank = new Array[Int](n)
+class DisjointSet(n: Int):
+  private val parent, rank = Array.ofDim[Int](n)
 
   clear()
 
-  def clear(): Unit = {
+  def clear(): Unit =
     JArrays.fill(rank, 0)
     Helpers.fillIdentity(parent)
-  }
 
-  def get(a: Int): Int = {
+  def get(a: Int): Int =
     val p = fetchParent(a)
     promoteParent(a, p)
     p
-  }
 
-  def unite(a: Int, b: Int): Boolean = {
+  def unite(a: Int, b: Int): Boolean =
     val pa = get(a)
     val pb = get(b)
-    if (pa != pb) {
-      if (rank(pa) == rank(pb))
-        rank(pa) += 1
-      if (rank(pa) < rank(pb))
-        parent(pa) = pb
-      else
-        parent(pb) = pa
-    }
+    if pa != pb then
+      if rank(pa) == rank(pb) then rank(pa) += 1
+
+      if rank(pa) < rank(pb) 
+      then parent(pa) = pb
+      else parent(pb) = pa
     pa != pb
-  }
 
   @tailrec
-  private[this] def fetchParent(a: Int): Int = {
+  private def fetchParent(a: Int): Int =
     val p = parent(a)
-    if (a == p) a else fetchParent(p)
-  }
+    if a == p then a else fetchParent(p)
 
   @tailrec
-  private[this] def promoteParent(a: Int, newParent: Int): Unit = {
+  private def promoteParent(a: Int, newParent: Int): Unit =
     val p = parent(a)
-    if (a != p) {
+    if a != p then
       parent(a) = newParent
       promoteParent(p, newParent)
-    }
-  }
-}
+end DisjointSet

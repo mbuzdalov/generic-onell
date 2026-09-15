@@ -8,152 +8,135 @@ import scala.collection.mutable.{HashSet => MuHashSet}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class DynamicGraphTests extends AnyFlatSpec with Matchers {
-  private sealed trait ScriptCommand {
+class DynamicGraphTests extends AnyFlatSpec with Matchers:
+  private sealed trait ScriptCommand:
     def execute(graph: DynamicGraph): Unit
-  }
-  private class ScriptAdd(edge: DynamicGraph.Edge) extends ScriptCommand {
+  private class ScriptAdd(edge: DynamicGraph.Edge) extends ScriptCommand:
     override def execute(graph: DynamicGraph): Unit = graph.addEdge(edge)
-  }
-  private class ScriptRemove(edge: DynamicGraph.Edge) extends ScriptCommand {
+  private class ScriptRemove(edge: DynamicGraph.Edge) extends ScriptCommand:
     override def execute(graph: DynamicGraph): Unit = graph.removeEdge(edge)
-  }
-  private class ScriptTest(expected: Int) extends ScriptCommand {
+  private class ScriptTest(expected: Int) extends ScriptCommand:
     override def execute(graph: DynamicGraph): Unit = graph.nConnectivityComponents shouldBe expected
-  }
-  private object ScriptPrint extends ScriptCommand {
+  private object ScriptPrint extends ScriptCommand:
     override def execute(graph: DynamicGraph): Unit = print(graph.nConnectivityComponents.toString + ", ")
-  }
 
   private sealed trait InputCommand
   private case class InputAdd(a: Int, b: Int) extends InputCommand
   private case class InputRemove(a: Int, b: Int) extends InputCommand
   private case class InputTest(expected: Int) extends InputCommand
 
-  private class Script(inputs: InputCommand*) {
-    private val allPairs = inputs flatMap {
+  private class Script(inputs: InputCommand*):
+    private val allPairs = inputs.flatMap:
       case InputAdd(a, b) => Some(math.min(a, b) -> math.max(a, b))
       case InputRemove(a, b) => Some(math.min(a, b) -> math.max(a, b))
       case InputTest(_) => None
-    }
-    private val edgeMap = allPairs.distinct.zipWithIndex.map(p => p._1 -> new DynamicGraph.Edge {
+    private val edgeMap = allPairs.distinct.zipWithIndex.map(p => p._1 -> new DynamicGraph.Edge:
       override def id: Int = p._2
       override def vertexA: Int = p._1._1
       override def vertexB: Int = p._1._2
-    }).toMap
+    ).toMap
     private val edges = edgeMap.values.toIndexedSeq
-    private val commands = inputs map {
+    private val commands = inputs.map:
       case InputAdd(a, b) => new ScriptAdd(edgeMap(math.min(a, b) -> math.max(a, b)))
       case InputRemove(a, b) => new ScriptRemove(edgeMap(math.min(a, b) -> math.max(a, b)))
-      case InputTest(expected) => if (expected < 0) ScriptPrint else new ScriptTest(expected)
-    }
-    private val nVertices = inputs.map{
-      case InputAdd(a, b) => math.max(a, b)
-      case InputRemove(a, b) => math.max(a, b)
-      case InputTest(_) => -1
-    }.max + 1
+      case InputTest(expected) => if (expected < 0) ScriptPrint else ScriptTest(expected)
+    private val nVertices = inputs
+      .map:
+        case InputAdd(a, b) => math.max(a, b)
+        case InputRemove(a, b) => math.max(a, b)
+        case InputTest(_) => -1
+      .max + 1
 
-    def run(factory: DynamicGraph.Factory): Unit = {
+    def run(factory: DynamicGraph.Factory): Unit =
       val graph = factory.newEmptyGraph(nVertices, edges)
       commands.foreach(_.execute(graph))
-    }
-  }
 
   @tailrec
-  private def generateWhileExists(edgeSet: MuHashSet[(Int, Int)], rng: Random, n: Int): (Int, Int) = {
+  private def generateWhileExists(edgeSet: MuHashSet[(Int, Int)], rng: Random, n: Int): (Int, Int) =
     val a, b = rng.nextInt(n)
     val e = math.min(a, b) -> math.max(a, b)
-    if (a == b || edgeSet.contains(e))
+    if a == b || edgeSet.contains(e) then
       generateWhileExists(edgeSet, rng, n)
-    else {
+    else 
       edgeSet.add(e)
       e
-    }
-  }
 
-  private def genRand(seed: Long, n: Int, k: Int, p: Int, answerSeq: Int*): Script = {
+  private def genRand(seed: Long, n: Int, k: Int, p: Int, answerSeq: Int*): Script =
     val sequence = IndexedSeq.newBuilder[InputCommand]
-    val rng = new Random(seed)
-    val edgeList = new Array[(Int, Int)](k)
-    val edgeSet = new MuHashSet[(Int, Int)]()
+    val rng = Random(seed)
+    val edgeList = Array.ofDim[(Int, Int)](k)
+    val edgeSet = MuHashSet[(Int, Int)]()
     var en = 0
     val maxEdgesPossible = n * (n - 1L) / 2
     var idx = 0
-    while (idx < k) {
-      if (en == maxEdgesPossible || en > 0 && rng.nextInt(1000) >= p) {
+    while idx < k do
+      if en == maxEdgesPossible || en > 0 && rng.nextInt(1000) >= p then
         val index = rng.nextInt(en)
         sequence += InputRemove(edgeList(index)._1, edgeList(index)._2)
         edgeSet.remove(edgeList(index))
         en -= 1
         edgeList(index) = edgeList(en)
-      } else {
+      else
         val edge = generateWhileExists(edgeSet, rng, n)
         edgeList(en) = edge
         en += 1
         sequence += InputAdd(edge._1, edge._2)
-      }
       sequence += InputTest(answerSeq(idx))
       idx += 1
-    }
 
-    new Script(sequence.result() :_*)
-  }
+    Script(sequence.result()*)
 
-  private def genRandSeq(seed: Long, n: Int, k: Int, p: Int, answerSeq: Int*): Script = {
+  private def genRandSeq(seed: Long, n: Int, k: Int, p: Int, answerSeq: Int*): Script =
     val sequence = IndexedSeq.newBuilder[InputCommand]
-    val rng = new Random(seed)
-    val edgeList = new Array[(Int, Int)](k)
-    val edgeSet = new MuHashSet[(Int, Int)]()
+    val rng = Random(seed)
+    val edgeList = Array.ofDim[(Int, Int)](k)
+    val edgeSet = MuHashSet[(Int, Int)]()
     var st, en = 0
     val maxEdgesPossible = n * (n - 1L) / 2
     var idx = 0
-    while (idx < k) {
-      if (en - st == maxEdgesPossible || en > st && rng.nextInt(1000) >= p) {
+    while idx < k do
+      if en - st == maxEdgesPossible || en > st && rng.nextInt(1000) >= p then
         sequence += InputRemove(edgeList(st)._1, edgeList(st)._2)
         edgeSet.remove(edgeList(st))
         st += 1
-      } else {
+      else
         val edge = generateWhileExists(edgeSet, rng, n)
         edgeList(en) = edge
         en += 1
         sequence += InputAdd(edge._1, edge._2)
-      }
       sequence += InputTest(answerSeq(idx))
       idx += 1
-    }
 
-    new Script(sequence.result() :_*)
-  }
+    Script(sequence.result()*)
 
   @tailrec
   private def gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
 
-  private def genCircle(n: Int, k: Int): Script = {
+  private def genCircle(n: Int, k: Int): Script =
     val sequence = IndexedSeq.newBuilder[InputCommand]
 
-    for (t <- 1 to k) {
+    for t <- 1 to k do
       val gg = gcd(n, t)
-      for (i <- 0 until n) {
+      for i <- 0 until n do
         sequence += InputAdd(i, (i + t) % n)
         sequence += InputTest(math.max(n - i - 1, gg))
-      }
-      for (i <- 0 until n) {
+      for i <- 0 until n do
         sequence += InputRemove(i, (i + t) % n)
         sequence += InputTest(math.max(i + 1, gg))
-      }
-    }
 
-    new Script(sequence.result() :_*)
-  }
+    Script(sequence.result()*)
 
-  private def genTwoFullGraphs(seed: Long, n: Int, k: Int): Script = {
+  private def genTwoFullGraphs(seed: Long, n: Int, k: Int): Script =
     val sequence = IndexedSeq.newBuilder[InputCommand]
-    val rng = new Random(seed)
+    val rng = Random(seed)
 
-    for (t <- 0 until 2; i <- 1 until n; j <- 0 until i)
-      sequence += InputAdd(i + n * t, j + n * t)
+    for 
+      t <- 0 until 2
+      i <- 1 until n
+      j <- 0 until i 
+    do sequence += InputAdd(i + n * t, j + n * t)
 
-    for (_ <- 0 until k) {
+    for _ <- 0 until k do
       val a1, a2 = rng.nextInt(n)
       val c1, c2 = rng.nextInt(n - 1)
       val b1 = if (c1 >= a1) c1 + 1 else c1
@@ -167,12 +150,10 @@ class DynamicGraphTests extends AnyFlatSpec with Matchers {
       sequence += InputTest(1)
       sequence += InputRemove(b1, b2 + n)
       sequence += InputTest(2)
-    }
 
-    new Script(sequence.result() :_*)
-  }
+    new Script(sequence.result()*)
 
-  private def test(name: String, factory: DynamicGraph.Factory): Unit = {
+  private def test(name: String, factory: DynamicGraph.Factory): Unit =
     name should "pass first manual test" in
       new Script(InputTest(5), InputAdd(0, 1), InputAdd(1, 2), InputAdd(2, 3), InputAdd(3, 4), InputAdd(4, 0),
                  InputTest(1), InputRemove(1, 2), InputTest(1), InputRemove(3, 4), InputTest(2)).run(factory)
@@ -348,8 +329,7 @@ class DynamicGraphTests extends AnyFlatSpec with Matchers {
       genTwoFullGraphs(734853463, 37, 2000).run(factory)
     it should "pass test with two full graphs and occasional connections with n=100" in
       genTwoFullGraphs(234354366, 100, 1000).run(factory)
-  }
-
+  end test
+  
   test("Naive implementation", NaiveDynamicGraph)
   test("Implementation by Vitaly Aksenov improved by MB", AksenovDynamicGraphWrapper)
-}

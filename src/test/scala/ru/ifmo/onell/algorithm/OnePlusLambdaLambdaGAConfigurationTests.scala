@@ -3,30 +3,28 @@ package ru.ifmo.onell.algorithm
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.*
 import ru.ifmo.onell.main.util.AlgorithmCodeNames
 import ru.ifmo.onell.problem.OneMax
 
-class OnePlusLambdaLambdaGAConfigurationTests extends AnyFlatSpec with Matchers {
+class OnePlusLambdaLambdaGAConfigurationTests extends AnyFlatSpec with Matchers:
   private val ProblemSize = 1 << 16   // 1<<15 yields a number of "false" negatives, 1<<17 takes too much time
 
   private def runOne(algorithm: OnePlusLambdaLambdaGA): Double =
     algorithm.optimize(new OneMax(ProblemSize)).toDouble / ProblemSize
 
   private def validate(name: String, lowerBound: Double, upperBound: Double): Unit =
-    s"Configuration $name in notation of Anton Bassin" should "be within limits" in {
+    s"Configuration $name in notation of Anton Bassin" should "be within limits" in:
       val parsedSequence = AlgorithmCodeNames.parseOnePlusLambdaLambdaGenerators(name)
       parsedSequence.size shouldBe 1
       val algorithm = parsedSequence.head._1.apply(defaultOneFifthLambda)
       val result0 = runOne(algorithm)
-      val result = if (result0 >= lowerBound && result0 <= upperBound)
-        result0
-      else
-        (runOne(algorithm) + runOne(algorithm) + runOne(algorithm)) / 3.0
+      val result = if result0 >= lowerBound && result0 <= upperBound 
+      then result0
+      else (runOne(algorithm) + runOne(algorithm) + runOne(algorithm)) / 3.0
 
       result should (be >= lowerBound)
       result should (be <= upperBound)
-    }
 
   validate("SSLID", 10.467735290527344, 11.362144470214844)
   validate("SSLIU", 10.547080993652344, 11.736961364746094)
@@ -244,4 +242,3 @@ class OnePlusLambdaLambdaGAConfigurationTests extends AnyFlatSpec with Matchers 
   validate("RRDCD", 6.3289337158203125, 6.6672210693359375)
   validate("RRDCU", 6.021488189697266, 6.630146026611328)
   validate("RRDCP", 6.238788604736328, 6.680515289306641)
-}

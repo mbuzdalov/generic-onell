@@ -2,23 +2,22 @@ package ru.ifmo.onell.main
 
 import java.io.PrintWriter
 import java.nio.file.{Files, Paths}
-import java.util.{Random, Arrays => JArrays}
-import java.util.concurrent.ThreadLocalRandom
-
-import scala.jdk.CollectionConverters._
+import java.util.{Random, Arrays as JArrays}
+import scala.jdk.CollectionConverters.*
 import scala.util.Using
-
 import ru.ifmo.onell.{HasIndividualOperations, Main, Optimizer}
 import ru.ifmo.onell.algorithm.{OnePlusLambdaLambdaGA, OnePlusOneEA}
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
-import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA.*
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.*
 import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
 import ru.ifmo.onell.problem.mst.TreeOnlyMST
 import ru.ifmo.onell.problem.mst.util.NaiveDynamicGraph
 import ru.ifmo.onell.problem.{Jump, LinearRandomDoubleWeights, LinearRandomIntegerWeights, OneMax, OneMaxPerm, RandomPlanted3SAT, VertexCoverProblem}
 import ru.ifmo.onell.util.par.{Executor, Multiplexer, ParallelExecutor, SequentialExecutor}
 
-object RunningTimes extends Main.Module {
+import java.util.random.RandomGenerator
+
+object RunningTimes extends Main.Module:
   override def name: String = "runtime"
 
   override def shortDescription: String = "Runs experiments on expected running times of algorithms on problems"
@@ -75,7 +74,7 @@ object RunningTimes extends Main.Module {
     "  --out <filename>: the name of the JSON file to save the results"
   )
 
-  override def moduleMain(args: Array[String]): Unit = args(0) match {
+  override def moduleMain(args: Array[String]): Unit = args(0) match
     case "bits:om"         => bitsOneMaxSimple(parseContext(args))
     case "bits:om:cap"     => bitsOneMaxCapping(parseContext(args))
     case "bits:om:3d"      => threeDistributionsOneMax(parseContext(args))
@@ -120,46 +119,36 @@ object RunningTimes extends Main.Module {
     case "bits:sat:lin" =>
       val distances = args.getOption("--d").split(',').toIndexedSeq.map(_.toInt)
       bitsMaxSATAlmostOptimal(parseContext(args), _ => distances)
-  }
 
-  private class Context(powers: Range, nRuns: Int, nThreads: Int, outName: String) {
-    private[this] val jsonPrefix = "["
-    private[this] val jsonSeparator = "\n,"
-    private[this] val jsonSuffix = "\n]\n"
+  private class Context(powers: Range, nRuns: Int, nThreads: Int, outName: String):
+    private val jsonPrefix = "["
+    private val jsonSeparator = "\n,"
+    private val jsonSuffix = "\n]\n"
 
-    private class JsonCallback(pw: PrintWriter) extends (String => Unit) {
-      private[this] var isFirst = true
+    private class JsonCallback(pw: PrintWriter) extends (String => Unit):
+      private var isFirst = true
 
-      override def apply(v1: String): Unit = {
-        if (isFirst) {
+      override def apply(v1: String): Unit =
+        if isFirst then
           pw.print(jsonPrefix)
           isFirst = false
-        } else {
-          pw.print(jsonSeparator)
-        }
+        else pw.print(jsonSeparator)
         pw.print(v1)
         println(v1)
-      }
-    }
 
     private def makeScheduler(nThreads: Int): Executor[String] =
-      if (nThreads == 1) new SequentialExecutor() else new ParallelExecutor(nThreads)
+      if nThreads == 1 then SequentialExecutor() else ParallelExecutor(nThreads)
 
-    def run(fun: (Executor[String], Int) => Any): Unit = {
-      Using.resource(new PrintWriter(outName)) { moreOut =>
-        Using.resource(makeScheduler(nThreads)) { scheduler =>
-          scheduler.addSynchronousCallback(new JsonCallback(moreOut))
-          val multiplexer = new Multiplexer(scheduler, nRuns)
-          for (p <- powers) {
-            fun(multiplexer, 1 << p)
-          }
-        }
+    def run(fun: (Executor[String], Int) => Any): Unit =
+      Using.resource(PrintWriter(outName)): moreOut =>
+        Using.resource(makeScheduler(nThreads)): scheduler =>
+          scheduler.addSynchronousCallback(JsonCallback(moreOut))
+          val multiplexer = Multiplexer(scheduler, nRuns)
+          for p <- powers do fun(multiplexer, 1 << p)
         moreOut.print(jsonSuffix)
-      }
-    }
-  }
+  end Context
 
-  private def bitsOneMaxSimple(context: Context): Unit = {
+  private def bitsOneMaxSimple(context: Context): Unit =
     val algorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
@@ -177,37 +166,25 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ=fixed optimal" -> createOnePlusLambdaLambdaGA(fixedLogTowerLambda, 'R', "RL", 'C', 'D'),
     )
 
-    context.run { (scheduler, n) =>
-      for ((name, alg) <- algorithms) {
-        scheduler addTask {
-          val time = alg.optimize(new OneMax(n))
-          s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (name, alg) <- algorithms do scheduler.addTask:
+        val time = alg.optimize(OneMax(n))
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsOneMaxCapping(context: Context): Unit = {
-    val algorithms = for {
+  private def bitsOneMaxCapping(context: Context): Unit =
+    val algorithms = for
       (beta, capLimit) <- Seq(2.1 -> 1024, 2.3 -> 4096, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
       cap <- (2 to 30).map(1 << _).filter(_ <= capLimit)
-    } yield {
-      (beta, cap, createOnePlusLambdaLambdaGA(powerLawLambda(beta, _ => cap), 'R', "RL", 'C', 'D'))
-    }
+    yield (beta, cap, createOnePlusLambdaLambdaGA(powerLawLambda(beta, _ => cap), 'R', "RL", 'C', 'D'))
 
-    context.run { (scheduler, n) =>
-      for ((beta, cap, alg) <- algorithms) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new OneMax(n))
-          val wcTime = (System.nanoTime() - t0) / 1e9
-          s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (beta, cap, alg) <- algorithms do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(new OneMax(n))
+        val wcTime = (System.nanoTime() - t0) / 1e9
+        s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
 
-  private def bitsOneMaxFromGood(context: Context, startValues: Int => Seq[Int]): Unit = {
+  private def bitsOneMaxFromGood(context: Context, startValues: Int => Seq[Int]): Unit =
     val algorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
       "(1+1) EA" -> OnePlusOneEA.Resampling,
@@ -220,45 +197,31 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ~pow(2.9)" -> createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'D'),
     )
 
-    context.run { (scheduler, n) =>
-      for ((name, alg) <- algorithms) {
-        for (sv <- startValues(n)) {
-          val normQ = math.sqrt(n.toDouble * sv)
-          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-          scheduler addTask {
-            val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
-          }
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (name, alg) <- algorithms; sv <- startValues(n) do
+        val normQ = math.sqrt(n.toDouble * sv)
+        scheduler.addTask:
+          val time = alg.optimize(OneMax(n))(using indOps = StartFromDistance(sv))
+          s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
 
-  private def bitsOneMaxFromGoodSmallBetas(context: Context, startValues: Int => Seq[Int]): Unit = {
+  private def bitsOneMaxFromGoodSmallBetas(context: Context, startValues: Int => Seq[Int]): Unit =
     val algorithms = Seq(
       "(1+(λ,λ)) GA, λ~pow(1.9)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.9, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ~pow(1.7)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.7, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
       "(1+(λ,λ)) GA, λ~pow(1.5)*" -> createOnePlusLambdaLambdaGA(powerLawLambda(1.5, s => math.sqrt(s).toLong), 'R', "RL", 'C', 'D'),
       )
 
-    context.run { (scheduler, n) =>
-      for ((name, alg) <- algorithms) {
-        for (sv <- startValues(n)) {
-          val normQ = math.sqrt(n.toDouble * sv)
-          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-          scheduler addTask {
-            val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-            s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
-          }
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (name, alg) <- algorithms; sv <- startValues(n) do
+        val normQ = math.sqrt(n.toDouble * sv)
+        scheduler.addTask:
+          val time = alg.optimize(OneMax(n))(using indOps = StartFromDistance(sv))
+          s"""{"n":$n,"algorithm":"$name","runtime":$time,"d":$sv,"runtime over sqrt(nd)":${time.toDouble / normQ}}"""
 
-  private val tuningChoices = {
-    val lambdaStrategies = Seq("λ=8" -> fixedLambda(8) _,
-                               "λ<=n" -> defaultOneFifthLambda _,
-                               "λ<=log n" -> logCappedOneFifthLambda _)
+  private val tuningChoices =
+    val lambdaStrategies = Seq("λ=8" -> fixedLambda(8),
+                               "λ<=n" -> defaultOneFifthLambda,
+                               "λ<=log n" -> logCappedOneFifthLambda)
     val mutationStrengths = Seq("standard" -> MutationStrength.Standard,
                                 "shift" -> MutationStrength.Shift,
                                 "resampling" -> MutationStrength.Resampling)
@@ -275,32 +238,25 @@ object RunningTimes extends Main.Module {
     val populationSizeRoundings = Seq("round down" -> PopulationSizeRounding.AlwaysDown,
                                       "round up" -> PopulationSizeRounding.AlwaysUp,
                                       "probabilistic" -> PopulationSizeRounding.Probabilistic)
-    for {
+    for
       (l, lambdaStrategy) <- lambdaStrategies
       (m, mutationStrength) <- mutationStrengths
       (c, crossoverStrength) <- crossoverStrengths
       (g, goodMutantStrategy) <- goodMutantStrategies
       (r, rounding) <- populationSizeRoundings
-    } yield {
+    yield
       val jsonNamePart = s""""lambda":"$l","mutation":"$m","crossover":"$c","good mutant":"$g","rounding":"$r""""
       val algGenerator = () => createOnePlusLambdaLambdaGA(lambdaStrategy, mutationStrength, crossoverStrength,
-                                                         goodMutantStrategy, rounding)
+                                                           goodMutantStrategy, rounding)
       jsonNamePart -> algGenerator
-    }
-  }
 
-  private def bitsOneMaxAllTuningChoices(context: Context): Unit = {
-    context.run { (scheduler, n) =>
-      for ((jsonName, algGenerator) <- tuningChoices) {
-        scheduler addTask {
-          val time = algGenerator().optimize(new OneMax(n))
-          s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+  private def bitsOneMaxAllTuningChoices(context: Context): Unit =
+    context.run: (scheduler, n) =>
+      for (jsonName, algGenerator) <- tuningChoices do scheduler.addTask:
+        val time = algGenerator().optimize(OneMax(n))
+        s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsOneMaxIRacedTuningChoices(context: Context, fileList: String): Unit = {
+  private def bitsOneMaxIRacedTuningChoices(context: Context, fileList: String): Unit =
     val allLines = fileList
       .split(',')
       .flatMap(filename => Files
@@ -308,18 +264,13 @@ object RunningTimes extends Main.Module {
         .asScala
         .filter(_.nonEmpty)
         .toIndexedSeq)
-    context.run { (scheduler, n) =>
-      for (line <- allLines) {
-        scheduler addTask {
-          val args = line.split(" ").filter(_.nonEmpty)
-          val name = IRaceClient.parseOptimizerJson("oll", args)
-          val algorithm = IRaceClient.parseOptimizer("oll", args)
-          val time = algorithm.optimize(new OneMax(n))
-          s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for line <- allLines do scheduler.addTask:
+        val args = line.split(" ").filter(_.nonEmpty)
+        val name = IRaceClient.parseOptimizerJson("oll", args)
+        val algorithm = IRaceClient.parseOptimizer("oll", args)
+        val time = algorithm.optimize(OneMax(n))
+        s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
   private val parameterTuningExperimentAlgorithmSelectionDouble = Seq(
     ("RLS", OnePlusOneEA.RLS),
@@ -343,63 +294,43 @@ object RunningTimes extends Main.Module {
     ("*$\\\\lambdabound\\\\sim\\\\ln n$", createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'H', "HD", 'C', 'P')),
   )
 
-  private def bitsParameterTuningLinearDouble(context: Context, maxWeight: Double): Unit = {
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
-      for ((name, alg) <- parameterTuningExperimentAlgorithmSelectionDouble) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
-          val wcTime = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
-        }
-      }
-    }
-  }
+  private def bitsParameterTuningLinearDouble(context: Context, maxWeight: Double): Unit =
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
+      for (name, alg) <- parameterTuningExperimentAlgorithmSelectionDouble do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
+        val wcTime = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
 
-  private def bitsParameterTuningLinearInteger(context: Context, maxWeight: Int => Int): Unit = {
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
-      for ((name, alg) <- parameterTuningExperimentAlgorithmSelection) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new LinearRandomIntegerWeights(n, maxWeight(n), seeder.nextLong()))
-          val wcTime = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
-        }
-      }
-    }
-  }
+  private def bitsParameterTuningLinearInteger(context: Context, maxWeight: Int => Int): Unit =
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
+      for (name, alg) <- parameterTuningExperimentAlgorithmSelection do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(LinearRandomIntegerWeights(n, maxWeight(n), seeder.nextLong()))
+        val wcTime = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
 
-  private def bitsParameterTuningMaxSAT(context: Context): Unit = {
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
+  private def bitsParameterTuningMaxSAT(context: Context): Unit =
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
       val nClauses = (4 * n * math.log(n)).toInt
-      for ((name, alg) <- parameterTuningExperimentAlgorithmSelection) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-          val consumed = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$consumed}"""
-        }
-      }
-    }
-  }
+      for (name, alg) <- parameterTuningExperimentAlgorithmSelection do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$consumed}"""
 
-  private def bitsLinearTunings(context: Context, maxWeight: Double): Unit = {
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
-      for ((jsonName, algGenerator) <- tuningChoices) {
-        scheduler addTask {
-          val time = algGenerator().optimize(new LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
-          s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+  private def bitsLinearTunings(context: Context, maxWeight: Double): Unit =
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
+      for (jsonName, algGenerator) <- tuningChoices do scheduler.addTask:
+        val time = algGenerator().optimize(LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
+        s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsLinearDoubleIRacedTuningChoices(context: Context, maxWeight: Double, fileList: String): Unit = {
-    val seeder = new Random(314252354)
+  private def bitsLinearDoubleIRacedTuningChoices(context: Context, maxWeight: Double, fileList: String): Unit =
+    val seeder = Random(314252354)
     val allLines = fileList
       .split(',')
       .flatMap(filename => Files
@@ -407,26 +338,20 @@ object RunningTimes extends Main.Module {
         .asScala
         .filter(_.nonEmpty)
         .toIndexedSeq)
-    context.run { (scheduler, n) =>
-      for (line <- allLines) {
-        scheduler addTask {
-          val args = line.split(" ").filter(_.nonEmpty)
-          val name = IRaceClient.parseOptimizerJson("oll", args)
-          val algorithm = IRaceClient.parseOptimizer("oll", args)
-          val time = algorithm.optimize(new LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
-          s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for line <- allLines do scheduler.addTask:
+        val args = line.split(" ").filter(_.nonEmpty)
+        val name = IRaceClient.parseOptimizerJson("oll", args)
+        val algorithm = IRaceClient.parseOptimizer("oll", args)
+        val time = algorithm.optimize(new LinearRandomDoubleWeights(n, maxWeight, seeder.nextLong()))
+        s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsMaxSATSimple(context: Context): Unit = {
-    def makeHeavy(betaTen: Range, cap: Long => Long, capName: String): Seq[(String, Optimizer)] = betaTen map { b10 =>
+  private def bitsMaxSATSimple(context: Context): Unit =
+    def makeHeavy(betaTen: Range, cap: Long => Long, capName: String): Seq[(String, Optimizer)] = betaTen.map: b10 =>
       val b = b10 / 10.0
       val name = s"(1+(λ,λ)) GA, λ~pow($b), u=$capName"
       val algo = createOnePlusLambdaLambdaGA(powerLawLambda(b, cap), 'R', "RL", 'C', 'U')
       (name, algo)
-    }
 
     val basicAlgorithms = Seq(
       "RLS" -> OnePlusOneEA.RLS,
@@ -440,61 +365,44 @@ object RunningTimes extends Main.Module {
       makeHeavy(21 to 29 by 2, n => math.ceil(math.sqrt(n.toDouble)).toLong, "sqrt(n)") ++
       makeHeavy(11 to 29 by 2, n => math.ceil(2 * math.log(n + 1.0)).toLong, "2ln(n+1)")
 
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
       val nClauses = (4 * n * math.log(n)).toInt
-      for ((name, alg) <- algorithms) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-          val consumed = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$consumed}"""
-        }
-      }
-    }
-  }
-
-  private def bitsMaxSATCapping(context: Context): Unit = {
-    def makeHeavy(b: Double, cap: Int): Optimizer = {
+      for (name, alg) <- algorithms do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$consumed}"""
+  end bitsMaxSATSimple
+  
+  private def bitsMaxSATCapping(context: Context): Unit =
+    def makeHeavy(b: Double, cap: Int): Optimizer =
       createOnePlusLambdaLambdaGA(powerLawLambda(b, _ => cap), 'R', "RL", 'C', 'U')
-    }
 
-    val algorithms = for {
+    val algorithms = for
       (beta, capLimit) <- Seq(2.1 -> 256, 2.3 -> 32768, 2.5 -> 32768, 2.7 -> 32768, 2.9 -> 32768)
       cap <- (2 to 13).map(1 << _).filter(_ <= capLimit)
-    } yield {
-      (beta, cap, makeHeavy(beta, cap))
-    }
+    yield (beta, cap, makeHeavy(beta, cap))
 
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
       val nClauses = (4 * n * math.log(n)).toInt
-      for ((beta, cap, alg) <- algorithms) {
-        scheduler addTask {
-          val t0 = System.nanoTime()
-          val time = alg.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-          val wcTime = (System.nanoTime() - t0) / 1e9
-          s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
-        }
-      }
-    }
-  }
+      for (beta, cap, alg) <- algorithms do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+        val wcTime = (System.nanoTime() - t0) / 1e9
+        s"""{"n":$n,"beta":"$beta","cap":"$cap","runtime":$time,"runtime over n":${time.toDouble / n},"wall-clock time":$wcTime}"""
 
-  private def bitsMaxSatTunings(context: Context): Unit = {
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
+  private def bitsMaxSatTunings(context: Context): Unit =
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
       val nClauses = (4 * n * math.log(n)).toInt
-      for ((jsonName, algGenerator) <- tuningChoices) {
-        scheduler addTask {
-          val time = algGenerator().optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-          s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+      for (jsonName, algGenerator) <- tuningChoices do scheduler.addTask:
+        val time = algGenerator().optimize(RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+        s"""{"n":$n,"irace":0,$jsonName,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsMaxSatIRacedTuningChoices(context: Context, fileList: String): Unit = {
-    val seeder = new Random(314252354)
+  private def bitsMaxSatIRacedTuningChoices(context: Context, fileList: String): Unit =
+    val seeder = Random(314252354)
     val allLines = fileList
       .split(',')
       .flatMap(filename => Files
@@ -502,21 +410,16 @@ object RunningTimes extends Main.Module {
         .asScala
         .filter(_.nonEmpty)
         .toIndexedSeq)
-    context.run { (scheduler, n) =>
+    context.run: (scheduler, n) =>
       val nClauses = (4 * n * math.log(n)).toInt
-      for (line <- allLines) {
-        scheduler addTask {
-          val args = line.split(" ").filter(_.nonEmpty)
-          val name = IRaceClient.parseOptimizerJson("oll", args)
-          val algorithm = IRaceClient.parseOptimizer("oll", args)
-          val time = algorithm.optimize(new RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-          s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
-        }
-      }
-    }
-  }
+      for line <- allLines do scheduler.addTask:
+        val args = line.split(" ").filter(_.nonEmpty)
+        val name = IRaceClient.parseOptimizerJson("oll", args)
+        val algorithm = IRaceClient.parseOptimizer("oll", args)
+        val time = algorithm.optimize(RandomPlanted3SAT(n, nClauses, RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
+        s"""{"n":$n,"irace":1,$name,"runtime":$time,"runtime over n":${time.toDouble / n}}"""
 
-  private def bitsMaxSATAlmostOptimal(context: Context, startValues: Int => Seq[Int]): Unit = {
+  private def bitsMaxSATAlmostOptimal(context: Context, startValues: Int => Seq[Int]): Unit =
     val algorithms = Seq(
       ("RLS", Int.MaxValue, OnePlusOneEA.RLS),
       ("(1+1) EA", Int.MaxValue, OnePlusOneEA.Resampling),
@@ -529,24 +432,18 @@ object RunningTimes extends Main.Module {
       ("(1+(λ,λ)) GA, λ~pow(2.9)", Int.MaxValue, createOnePlusLambdaLambdaGA(powerLawLambda(2.9), 'R', "RL", 'C', 'U')),
     )
 
-    val seeder = new Random(314252354)
-    context.run { (scheduler, n) =>
-      for ((name, limit, alg) <- algorithms) {
-        if (n <= limit) {
-          for (sv <- startValues(n)) {
-            implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-            scheduler addTask {
-              val time = alg.optimize(new RandomPlanted3SAT(n, (4 * n * math.log(n)).toInt,
-                                                            RandomPlanted3SAT.EasyGenerator, seeder.nextLong()))
-              s"""{"n":$n,"algorithm":"$name","runtime":$time,"initial distance":$sv,"runtime over n":${time.toDouble / n}}"""
-            }
-          }
-        }
-      }
-    }
-  }
+    val seeder = Random(314252354)
+    context.run: (scheduler, n) =>
+      for 
+        (name, limit, alg) <- algorithms
+        if n <= limit
+        sv <- startValues(n)
+      do scheduler.addTask:
+        val problem = RandomPlanted3SAT(n, (4 * n * math.log(n)).toInt, RandomPlanted3SAT.EasyGenerator, seeder.nextLong())
+        val time = alg.optimize(problem)(using indOps = StartFromDistance(sv))
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"initial distance":$sv,"runtime over n":${time.toDouble / n}}"""
 
-  private def permOneMaxSimple(context: Context): Unit = {
+  private def permOneMaxSimple(context: Context): Unit =
     val algorithms = Seq(
       ("RLS", Int.MaxValue, OnePlusOneEA.RLS),
       ("(1+1) EA", Int.MaxValue, OnePlusOneEA.Resampling),
@@ -557,19 +454,15 @@ object RunningTimes extends Main.Module {
       ("(1+(λ,λ)) GA, λ~pow(2.5)", 4096, createOnePlusLambdaLambdaGA(powerLawLambda(2.5), 'R', "RL", 'C', 'U')),
     )
 
-    context.run { (scheduler, n) =>
-      for ((name, maxN, alg) <- algorithms) {
-        if (n <= maxN) {
-          scheduler.addTask {
-            val time = alg.optimize(new OneMaxPerm(n))
-            s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n2":${time.toDouble / n / n}}"""
-          }
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for 
+        (name, maxN, alg) <- algorithms 
+        if n <= maxN
+      do scheduler.addTask:
+        val time = alg.optimize(OneMaxPerm(n))
+        s"""{"n":$n,"algorithm":"$name","runtime":$time,"runtime over n2":${time.toDouble / n / n}}"""
 
-  private def vertexCoverPSSimple(context: Context): Unit = {
+  private def vertexCoverPSSimple(context: Context): Unit =
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+1) FEA~pow(1.1)" -> OnePlusOneEA.heavyDirect(1.1),
@@ -579,22 +472,16 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)" -> new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)),
     )
 
-    context.run { (scheduler, nn) =>
+    context.run: (scheduler, nn) =>
       val k = Integer.numberOfTrailingZeros(nn)
       val vcp = VertexCoverProblem.makePSProblem(k)
-      for ((name, alg) <- algorithms) {
-        scheduler addTask {
-          implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
-          val t0 = System.nanoTime()
-          val time = alg.optimize(vcp)
-          val consumed = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
-        }
-      }
-    }
-  }
+      for (name, alg) <- algorithms do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(vcp)(using indOps = vcp)
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
 
-  private def vertexCoverRandomSimple(context: Context, nInstances: Int): Unit = {
+  private def vertexCoverRandomSimple(context: Context, nInstances: Int): Unit =
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+1) FEA~pow(1.1)" -> OnePlusOneEA.heavyDirect(1.1),
@@ -604,24 +491,20 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)" -> new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)),
     )
 
-    context.run { (scheduler, nn) =>
+    context.run: (scheduler, nn) =>
       val k = Integer.numberOfTrailingZeros(nn)
-      val vcpInstances = (0 until nInstances).map(i => (i, VertexCoverProblem.makeRandom(k, math.min(k * (k - 1) / 2, 5 * k), 3 + 7724644346661L * i + 888373 * k)))
-      for ((name, alg) <- algorithms) {
-        for ((idx, vcp) <- vcpInstances) {
-          scheduler addTask {
-            implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
-            val t0 = System.nanoTime()
-            val time = alg.optimize(vcp)
-            val consumed = (System.nanoTime() - t0) * 1e-9
-            s"""{"n":${vcp.nVertices},"instance":$idx,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
-          }
-        }
-      }
-    }
-  }
+      val vcpInstances = for i <- 0 until nInstances yield
+        (i, VertexCoverProblem.makeRandom(k, math.min(k * (k - 1) / 2, 5 * k), 3 + 7724644346661L * i + 888373 * k))
+      for 
+        (name, alg) <- algorithms
+        (idx, vcp) <- vcpInstances 
+      do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(vcp)(using indOps = vcp)
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":${vcp.nVertices},"instance":$idx,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
 
-  private def vertexCoverBipartiteSimple(context: Context): Unit = {
+  private def vertexCoverBipartiteSimple(context: Context): Unit =
     val algorithms = Seq(
       ("(1+1) EA", 5, OnePlusOneEA.Resampling),
       ("(1+1) FEA~pow(1.1)", 30, OnePlusOneEA.heavyDirect(1.1)),
@@ -631,22 +514,19 @@ object RunningTimes extends Main.Module {
       ("(1+(λ,λ)) GA, (2.1, 1.1, 1.1, n)", 30, new OnePlusLambdaLambdaGA(new ThreeDistributionController(1.1, 1.1, n => PowerLawDistribution(n, 2.1)), BehaviorForGoodMutant.UpdateParent, CompatibilityOptions(false)))
     )
 
-    context.run { (scheduler, nn) =>
+    context.run: (scheduler, nn) =>
       val k = Integer.numberOfTrailingZeros(nn)
       val vcp = VertexCoverProblem.makeBipartiteGraph(k, k + 1)
-      for ((name, limit, alg) <- algorithms if k <= limit) {
-        scheduler addTask {
-          implicit val individualOps: HasIndividualOperations[VertexCoverProblem.Individual] = vcp
-          val t0 = System.nanoTime()
-          val time = alg.optimize(vcp)
-          val consumed = (System.nanoTime() - t0) * 1e-9
-          s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
-        }
-      }
-    }
-  }
+      for 
+        (name, limit, alg) <- algorithms 
+        if k <= limit
+      do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(vcp)(using indOps = vcp)
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"n":${vcp.nVertices},"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
 
-  private def treeOnlyMST(context: Context, nInstances: Int, maxWeights: Array[Int], edgeMultiples: Array[Int]): Unit = {
+  private def treeOnlyMST(context: Context, nInstances: Int, maxWeights: Array[Int], edgeMultiples: Array[Int]): Unit =
     val algorithms = Seq(
       "(1+1) EA" -> OnePlusOneEA.Resampling,
       "(1+(λ,λ)) GA, λ<=2ln n" -> createOnePlusLambdaLambdaGA(logCappedOneFifthLambda, 'R', "RL", 'C', 'D'),
@@ -654,182 +534,138 @@ object RunningTimes extends Main.Module {
       "(1+(λ,λ)) GA, λ=10" -> createOnePlusLambdaLambdaGA(fixedLambda(10), 'R', "RL", 'C', 'D'),
     )
 
-    val baseRNG = new java.util.Random(872454326413212L)
+    val baseRNG = Random(872454326413212L)
     val seeds = IndexedSeq.fill(nInstances)(baseRNG.nextLong())
 
-    context.run { (scheduler, n) =>
-      for {
+    context.run: (scheduler, n) =>
+      for
         e <- edgeMultiples.map(_ * n)
         w <- maxWeights
         inst <- 0 until nInstances
-      } {
-        val mst = TreeOnlyMST.randomGraph(n, e, 1, w, new java.util.Random(seeds(inst)), NaiveDynamicGraph)
-        for ((name, alg) <- algorithms) {
-          scheduler addTask {
-            implicit val individualOps: HasIndividualOperations[TreeOnlyMST.Individual] = mst
-            val t0 = System.nanoTime()
-            val time = alg.optimize(mst)
-            val consumed = (System.nanoTime() - t0) * 1e-9
-            s"""{"nVertices":$n,"nEdges":$e,"maxWeight":$w,"instance":$inst,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
-          }
-        }
-      }
-    }
-  }
+        mst = TreeOnlyMST.randomGraph(n, e, 1, w, Random(seeds(inst)), NaiveDynamicGraph)
+        (name, alg) <- algorithms
+      do scheduler.addTask:
+        val t0 = System.nanoTime()
+        val time = alg.optimize(mst)(using indOps = mst)
+        val consumed = (System.nanoTime() - t0) * 1e-9
+        s"""{"nVertices":$n,"nEdges":$e,"maxWeight":$w,"instance":$inst,"algorithm":"$name","runtime":$time,"wall-clock time":$consumed}"""
 
-  private def threeDistributionsOneMax(context: Context): Unit = {
-    val algorithms = for {
+  private def threeDistributionsOneMax(context: Context): Unit =
+    val algorithms = for
       betaL <- Seq(2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
       betaP <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
       betaC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
-    } yield {
-      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaP, betaC, distLFun)
-      (betaP, betaC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
-    }
+    yield
+      def distLFun(n: Long): IntegerDistribution = if n < 27 then PowerLawDistribution(1L << n, betaL) else distL
+      val controller = ThreeDistributionController(betaP, betaC, distLFun)
+      (betaP, betaC, betaL, OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
 
-    context.run { (scheduler, n) =>
-      for ((betaP, betaC, betaL, alg) <- algorithms) {
-        scheduler.addTask {
-          val time = alg.optimize(new OneMax(n))
-          s"""{"n":$n,"betaP":$betaP,"betaC":$betaC,"betaL":$betaL,"runtime":$time}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (betaP, betaC, betaL, alg) <- algorithms do scheduler.addTask:
+        val time = alg.optimize(OneMax(n))
+        s"""{"n":$n,"betaP":$betaP,"betaC":$betaC,"betaL":$betaL,"runtime":$time}"""
 
-  private def threeDistributionsOneMaxFromGoodA(context: Context): Unit = {
-    val algorithms = for {
+  private def threeDistributionsOneMaxFromGoodA(context: Context): Unit =
+    val algorithms = for
       betaL <- Seq(2.8)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
       betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
-    } yield {
-      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaPC, betaPC, distLFun)
-      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
-    }
+    yield
+      def distLFun(n: Long): IntegerDistribution = if n < 27 then PowerLawDistribution(1L << n, betaL) else distL
+      val controller = ThreeDistributionController(betaPC, betaPC, distLFun)
+      (betaPC, betaL, OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
 
-    context.run { (scheduler, n) =>
+    context.run: (scheduler, n) =>
       val norm = n * math.log(n + 1)
-      for ((betaPC, betaL, alg) <- algorithms) {
-        scheduler.addTask {
-          val sv = math.sqrt(n).toInt
-          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-          val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-          s"""{"n":$n,"algo":"1LL","betaPC":$betaPC,"betaL":$betaL,"runtime":$time,"runtime over n log n":${time / norm}}"""
-        }
-      }
-      scheduler.addTask {
+      for (betaPC, betaL, alg) <- algorithms do scheduler.addTask:
+        val sv = math.sqrt(n).toInt
+        val time = alg.optimize(OneMax(n))(using indOps = StartFromDistance(sv))
+        s"""{"n":$n,"algo":"1LL","betaPC":$betaPC,"betaL":$betaL,"runtime":$time,"runtime over n log n":${time / norm}}"""
+
+      scheduler.addTask:
         val alg = OnePlusOneEA.Resampling
         val sv = math.sqrt(n).toInt
-        implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-        val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
+        val time = alg.optimize(OneMax(n))(using indOps = StartFromDistance(sv))
         s"""{"n":$n,"algo":"1+1","runtime":$time,"runtime over n log n":${time / norm}}"""
-      }
-    }
-  }
 
-  private def threeDistributionsOneMaxFromGoodB(context: Context): Unit = {
-    val algorithms = for {
+  private def threeDistributionsOneMaxFromGoodB(context: Context): Unit =
+    val algorithms = for
       betaL <- Seq(2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and several gigs of memory
       betaPC <- Seq(1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2)
-    } yield {
-      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaPC, betaPC, distLFun)
-      (betaPC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
-    }
+    yield
+      def distLFun(n: Long): IntegerDistribution = if n < 27 then PowerLawDistribution(1L << n, betaL) else distL
+      val controller = ThreeDistributionController(betaPC, betaPC, distLFun)
+      (betaPC, betaL, OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
 
-    context.run { (scheduler, n) =>
-      for ((betaPC, betaL, alg) <- algorithms) {
-        scheduler.addTask {
-          val sv = math.sqrt(n).toInt
-          implicit val almostOptimalBitStringOps: HasIndividualOperations[Array[Boolean]] = new StartFromDistance(sv)
-          val time = alg.optimize(new OneMax(n))(indOps = almostOptimalBitStringOps, deltaOps = implicitly)
-          s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time}"""
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for (betaPC, betaL, alg) <- algorithms do scheduler.addTask:
+        val sv = math.sqrt(n).toInt
+        val time = alg.optimize(OneMax(n))(using indOps = StartFromDistance(sv))
+        s"""{"n":$n,"betaPC":$betaPC,"betaL":$betaL,"runtime":$time}"""
 
-  private def threeDistributionsJump(context: Context): Unit = {
-    val algorithms = for {
+  private def threeDistributionsJump(context: Context): Unit =
+    val algorithms = for
       betaL <- Seq(2.0, 2.2, 2.4)
       distL = PowerLawDistribution(1L << 27, betaL) // with betaL=2, this takes 96M values and few gigs of memory
       betaP <- Seq(1.0, 1.2, 1.4)
       betaC <- Seq(1.0, 1.2, 1.4)
-    } yield {
-      def distLFun(n: Long): IntegerDistribution = if (n < 27) PowerLawDistribution(1L << n, betaL) else distL
-      val controller = new ThreeDistributionController(betaP, betaC, distLFun)
-      (betaP, betaC, betaL, new OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
-    }
+    yield
+      def distLFun(n: Long): IntegerDistribution = if n < 27 then PowerLawDistribution(1L << n, betaL) else distL
+      val controller = ThreeDistributionController(betaP, betaC, distLFun)
+      (betaP, betaC, betaL, OnePlusLambdaLambdaGA(controller, BehaviorForGoodMutant.IgnoreExistence, CompatibilityOptions(true)))
 
-    context.run { (scheduler, n) =>
-      for ((betaP, betaC, betaL, alg) <- algorithms) {
-        for (k <- 2 to 6 if k * 4 <= n) {
-          scheduler.addTask {
-            val time = alg.optimize(new Jump(n, k))
-            s"""{"n":$n,"betaL":$betaL,"betaP":$betaP,"betaC":$betaC,"k":$k,"runtime":$time}"""
-          }
-        }
-      }
-    }
-  }
+    context.run: (scheduler, n) =>
+      for 
+        (betaP, betaC, betaL, alg) <- algorithms
+        k <- 2 to 6 if k * 4 <= n
+      do scheduler.addTask:
+        val time = alg.optimize(Jump(n, k))
+        s"""{"n":$n,"betaL":$betaL,"betaP":$betaP,"betaC":$betaC,"k":$k,"runtime":$time}"""
 
-  private class ThreeDistributionController(betaP: Double, betaC: Double, distL: Long => IntegerDistribution)
-    extends ParameterControllerCreator {
-    override def apply(nChanges: Long): ParameterController = new ParameterController {
+  private class ThreeDistributionController(betaP: Double, betaC: Double, distL: Long => IntegerDistribution) 
+  extends ParameterControllerCreator:
+    override def apply(nChanges: Long): ParameterController = new ParameterController:
       private val nSqrt = math.sqrt(nChanges.toDouble)
       private val powerLawP = PowerLawDistribution(nSqrt.toInt, betaP)
       private val powerLawC = PowerLawDistribution(nSqrt.toInt, betaC)
       private val powerLawLambda = distL(nChanges)
-
-      override def getParameters(rng: ThreadLocalRandom): IterationParameters = {
+      
+      override def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit = ()
+      override def getParameters(rng: RandomGenerator): IterationParameters =
         val lambda = powerLawLambda.sample(rng)
         val mutantDistance = BinomialDistribution.standard(nChanges, powerLawP.sample(rng) / nSqrt).sample(rng)
         IterationParameters(
           firstPopulationSize = lambda,
           secondPopulationSize = lambda,
           numberOfChangesInEachMutant = mutantDistance,
-          numberOfChangesInCrossoverOffspring =
-            BinomialDistribution.standard(mutantDistance, powerLawC.sample(rng) / nSqrt)
+          numberOfChangesInCrossoverOffspring = BinomialDistribution.standard(mutantDistance, powerLawC.sample(rng) / nSqrt)
         )
-      }
 
-      override def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit = {}
-    }
-  }
 
-  private implicit class Options(val args: Array[String]) extends AnyVal {
-    def getOption(option: String): String = {
+  extension (args: Array[String])
+    private def getOption(option: String): String =
       val index = args.indexOf(option)
-      if (index < 0) throw new IllegalArgumentException(s"No option '$option' is given")
-      if (index + 1 == args.length) throw new IllegalArgumentException(s"Option '$option' should have an argument")
+      if index < 0 then throw IllegalArgumentException(s"No option '$option' is given")
+      if index + 1 == args.length then throw IllegalArgumentException(s"Option '$option' should have an argument")
       args(index + 1)
-    }
-  }
 
-  private class StartFromDistance(start: Int) extends HasIndividualOperations[Array[Boolean]] {
-    override def createStorage(problemSize: Int): Array[Boolean] = new Array(problemSize)
-    override def initializeRandomly(individual: Array[Boolean], rng: ThreadLocalRandom): Unit = {
+  private class StartFromDistance(start: Int) extends HasIndividualOperations[Array[Boolean]]:
+    override def createStorage(problemSize: Int): Array[Boolean] = Array.ofDim(problemSize)
+    override def initializeRandomly(individual: Array[Boolean], rng: RandomGenerator): Unit =
       var remainingPoints = start
       val len = individual.length
       JArrays.fill(individual, true)
-      while (remainingPoints > 0) {
+      while remainingPoints > 0 do
         val idx = rng.nextInt(len)
-        if (individual(idx)) {
+        if individual(idx) then
           individual(idx) = false
           remainingPoints -= 1
-        }
-      }
-    }
-  }
 
-  private def parseContext(args: Array[String]): Context = new Context(
+  private def parseContext(args: Array[String]): Context = Context(
     powers   = args.getOption("--from").toInt to args.getOption("--to").toInt,
     nRuns    = args.getOption("--runs").toInt,
     nThreads = args.getOption("--threads").toInt,
     outName  = args.getOption("--out")
   )
-}

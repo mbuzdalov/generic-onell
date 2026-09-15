@@ -1,16 +1,15 @@
 package ru.ifmo.onell
 
-import java.util.concurrent.{ThreadLocalRandom => Random}
-
 import ru.ifmo.onell.util.{DenseIntSet, OrderedSet, SparseLongSet}
-import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp}
+
+import java.util.random.RandomGenerator
 
 /**
   * This trait encapsulates the knowledge about manipulations with delta representations.
   *
-  * @tparam ChangeIndexType the type of a single element of the delta.
+  * @tparam ChangeIndexType the type of element of the delta.
   */
-trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
+trait HasDeltaOperations[ChangeIndexType]:
   /**
     * Creates a new delta representation, given the number of possible changes.
     * @param nChanges the number of possible changes.
@@ -24,7 +23,7 @@ trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
     * @param rng the random number generator.
     * @return the particular sampled change.
     */
-  protected def sampleRandomChangeIndex(nChanges: ChangeIndexType, rng: Random): ChangeIndexType
+  protected def sampleRandomChangeIndex(nChanges: ChangeIndexType, rng: RandomGenerator): ChangeIndexType
 
     /**
     * Initializes the given delta using the specified delta size.
@@ -33,12 +32,10 @@ trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
     * @param size the size which the delta must have.
     * @param rng the random number generator.
     */
-  def initializeDelta(delta: OrderedSet[ChangeIndexType], nChanges: ChangeIndexType, size: Int, rng: Random): Unit = {
+  def initializeDelta(delta: OrderedSet[ChangeIndexType], nChanges: ChangeIndexType, size: Int, rng: RandomGenerator): Unit =
     delta.clear()
-    while (delta.size < size) {
+    while delta.size < size do
       delta.add(sampleRandomChangeIndex(nChanges, rng))
-    }
-  }
 
   /**
     * Initializes the given delta using a subset of the given source delta with the given size.
@@ -48,31 +45,25 @@ trait HasDeltaOperations[@specialized(csp) ChangeIndexType] {
     * @param rng the random number generator.
     */
   def initializeDeltaFromExisting(delta: OrderedSet[ChangeIndexType], source: OrderedSet[ChangeIndexType],
-                                  size: Int, rng: Random): Unit = {
+                                  size: Int, rng: RandomGenerator): Unit =
     delta.clear()
     val sourceSize = source.size
-    while (delta.size < size) {
+    while delta.size < size do
       // TODO: this can be much slower than intended if size is almost sourceSize
       // TODO: order must be preserved!
       delta.add(source(rng.nextInt(sourceSize)))
-    }
-  }
-}
 
 /**
   * This companion object contains several known implementations of the `HasDeltaOperations` trait.
   */
-object HasDeltaOperations {
-  private object IntSetOps extends HasDeltaOperations[Int] {
-    override def createStorage(nChanges: Int): OrderedSet[Int] = new DenseIntSet(nChanges)
-    override protected def sampleRandomChangeIndex(nChanges: Int, rng: Random): Int = rng.nextInt(nChanges)
-  }
+object HasDeltaOperations:
+  private object IntSetOps extends HasDeltaOperations[Int]:
+    override def createStorage(nChanges: Int): OrderedSet[Int] = DenseIntSet(nChanges)
+    override protected def sampleRandomChangeIndex(nChanges: Int, rng: RandomGenerator): Int = rng.nextInt(nChanges)
 
-  private object LongSetOps extends HasDeltaOperations[Long] {
-    override def createStorage(nChanges: Long): OrderedSet[Long] = new SparseLongSet()
-    override protected def sampleRandomChangeIndex(nChanges: Long, rng: Random): Long = rng.nextLong(nChanges)
-  }
+  private object LongSetOps extends HasDeltaOperations[Long]:
+    override def createStorage(nChanges: Long): OrderedSet[Long] = SparseLongSet()
+    override protected def sampleRandomChangeIndex(nChanges: Long, rng: RandomGenerator): Long = rng.nextLong(nChanges)
 
   implicit def forInt:  HasDeltaOperations[Int]  = IntSetOps
   implicit def forLong: HasDeltaOperations[Long] = LongSetOps
-}

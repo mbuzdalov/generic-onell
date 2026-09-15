@@ -1,7 +1,6 @@
 package ru.ifmo.onell
 
 import ru.ifmo.onell.util.OrderedSet
-import ru.ifmo.onell.util.Specialization.{changeSpecialization => cs, fitnessSpecialization => fs}
 
 /**
   * This trait encapsulates the knowledge for how to compute fitness,
@@ -12,7 +11,7 @@ import ru.ifmo.onell.util.Specialization.{changeSpecialization => cs, fitnessSpe
   * @tparam FitnessType the type of the fitness value.
   * @tparam ChangeIndexType the type of the index of a single change (e.g. the index to flip a bit at).
   */
-trait Fitness[IndividualType, @specialized(fs) FitnessType, @specialized(cs) ChangeIndexType] {
+trait Fitness[IndividualType, FitnessType, ChangeIndexType]:
   /**
     * Evaluates the given individual.
     * @param individual the individual.
@@ -34,7 +33,7 @@ trait Fitness[IndividualType, @specialized(fs) FitnessType, @specialized(cs) Cha
     * @param rhs the right-hand-side fitness.
     * @return the maximum of the two fitness values.
     */
-  final def max(lhs: FitnessType, rhs: FitnessType): FitnessType = if (compare(lhs, rhs) < 0) rhs else lhs
+  final def max(lhs: FitnessType, rhs: FitnessType): FitnessType = if compare(lhs, rhs) < 0 then rhs else lhs
 
   /**
     * Returns the worst value of the fitness, which is suitable to e.g. initialize best seen fitness.
@@ -98,9 +97,7 @@ trait Fitness[IndividualType, @specialized(fs) FitnessType, @specialized(cs) Cha
     * @return the new fitness after applying the change; the individual remains intact.
     */
   def evaluateAssumingDelta(ind: IndividualType, delta: OrderedSet[ChangeIndexType],
-                            currentFitness: FitnessType): FitnessType = {
+                            currentFitness: FitnessType): FitnessType =
     val result = applyDelta(ind, delta, currentFitness)
     unapplyDelta(ind, delta)
     result
-  }
-}

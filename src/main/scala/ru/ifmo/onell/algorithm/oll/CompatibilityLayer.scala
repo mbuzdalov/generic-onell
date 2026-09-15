@@ -1,23 +1,22 @@
 package ru.ifmo.onell.algorithm.oll
 
-import java.util.concurrent.{ThreadLocalRandom => Random}
-
 import scala.annotation.{tailrec, unused}
 import scala.language.implicitConversions
-
 import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA
-import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA._
+import ru.ifmo.onell.algorithm.OnePlusLambdaLambdaGA.*
 import ru.ifmo.onell.distribution.{BinomialDistribution, IntegerDistribution, PowerLawDistribution}
-import ru.ifmo.onell.distribution.BinomialDistribution._
+import ru.ifmo.onell.distribution.BinomialDistribution.*
 
-object CompatibilityLayer {
+import java.util.random.RandomGenerator
+
+object CompatibilityLayer:
   def createOnePlusLambdaLambdaGA(lambdaTuning: Long => LambdaTuning,
                                   mutationStrength: MutationStrength,
                                   crossoverStrength: CrossoverStrength,
                                   goodMutantStrategy: GoodMutantStrategy,
                                   populationRounding: PopulationSizeRounding,
                                   constantTuning: ConstantTuning = defaultTuning) =
-    new OnePlusLambdaLambdaGA(
+    OnePlusLambdaLambdaGA(
       parameterControllerCreator = createParameterController(lambdaTuning, mutationStrength, crossoverStrength,
                                                              goodMutantStrategy, populationRounding, constantTuning),
       behaviorForGoodMutant = createBehaviorForGoodMutant(goodMutantStrategy),
@@ -30,24 +29,21 @@ object CompatibilityLayer {
                                 goodMutantStrategy: GoodMutantStrategy,
                                 populationRounding: PopulationSizeRounding,
                                 constantTuning: ConstantTuning = defaultTuning): ParameterControllerCreator =
-    (nChanges: Long) => new ParameterController {
-      private[this] val tuning = lambdaTuning(nChanges)
+    (nChanges: Long) => new ParameterController:
+      private val tuning = lambdaTuning(nChanges)
 
-      override def getParameters(rng: Random): IterationParameters = {
+      override def getParameters(rng: RandomGenerator): IterationParameters =
         val lambda = tuning.lambda(rng)
         val mutationPopSize = math.max(1, populationRounding(lambda, rng))
         val crossoverPopSize = math.max(1, populationRounding(lambda * constantTuning.crossoverPopulationSizeQuotient, rng))
 
         val mutantDistance = mutationStrength(nChanges, constantTuning.mutationProbabilityQuotient * lambda).sample(rng)
         val q = constantTuning.crossoverProbabilityQuotient
-        val crossDistribution = {
+        val crossDistribution =
           val crossDistribution0 = crossoverStrength(lambda, mutantDistance, q)
-          if (mutantDistance == 0 || goodMutantStrategy != GoodMutantStrategy.DoNotSampleIdentical)
-            crossDistribution0
-          else if (crossDistribution0.minValue == mutantDistance)
-            IntegerDistribution.empty
-          else new ResampleUntilLess(crossDistribution0, mutantDistance)
-        }
+          if mutantDistance == 0 || goodMutantStrategy != GoodMutantStrategy.DoNotSampleIdentical then crossDistribution0
+          else if crossDistribution0.minValue == mutantDistance then IntegerDistribution.empty
+          else ResampleUntilLess(crossDistribution0, mutantDistance)
 
         IterationParameters(
           firstPopulationSize = mutationPopSize,
@@ -55,75 +51,61 @@ object CompatibilityLayer {
           numberOfChangesInEachMutant = mutantDistance,
           numberOfChangesInCrossoverOffspring = crossDistribution
         )
-      }
 
       override def receiveFeedback(budgetSpent: Long, childToParentComparison: Int): Unit =
-        if (childToParentComparison < 0)
-          tuning.notifyChildIsWorse(budgetSpent)
-        else if (childToParentComparison == 0)
-          tuning.notifyChildIsEqual(budgetSpent)
-        else
-          tuning.notifyChildIsBetter(budgetSpent)
-    }
+        if childToParentComparison < 0 then tuning.notifyChildIsWorse(budgetSpent)
+        else if childToParentComparison == 0 then tuning.notifyChildIsEqual(budgetSpent)
+        else tuning.notifyChildIsBetter(budgetSpent)
 
   private def createBehaviorForGoodMutant(goodMutantStrategy: GoodMutantStrategy): BehaviorForGoodMutant =
-    goodMutantStrategy match {
+    goodMutantStrategy match
       case GoodMutantStrategy.Ignore => BehaviorForGoodMutant.IgnoreExistence
       case GoodMutantStrategy.SkipCrossover => BehaviorForGoodMutant.SkipCrossover
       case GoodMutantStrategy.DoNotCountIdentical => BehaviorForGoodMutant.UpdateParent
       case GoodMutantStrategy.DoNotSampleIdentical => BehaviorForGoodMutant.UpdateParent
-    }
 
   private def createCompatibilityOptions(goodMutantStrategy: GoodMutantStrategy): CompatibilityOptions =
-    goodMutantStrategy match {
+    goodMutantStrategy match
       case GoodMutantStrategy.Ignore => CompatibilityOptions(countCrossoverOffspringIdenticalToBestMutantWhenDifferentFromParent = true)
       case GoodMutantStrategy.SkipCrossover => CompatibilityOptions(countCrossoverOffspringIdenticalToBestMutantWhenDifferentFromParent = true)
       case _ => CompatibilityOptions.Default
-    }
 
+  private val probEps = 1e-10
 
-  private[this] val probEps = 1e-10
+  trait PopulationSizeRounding:
+    def apply(fpValue: Double, rng: RandomGenerator): Int
 
-  trait PopulationSizeRounding {
-    def apply(fpValue: Double, rng: Random): Int
-  }
-
-  object PopulationSizeRounding {
-    final val AlwaysUp: PopulationSizeRounding = (fpValue: Double, _: Random) => math.ceil(fpValue).toInt
-    final val AlwaysDown: PopulationSizeRounding = (fpValue: Double, _: Random) => fpValue.toInt
-    final val Probabilistic: PopulationSizeRounding = (fpValue: Double, rng: Random) => {
+  object PopulationSizeRounding:
+    final val AlwaysUp: PopulationSizeRounding = (fpValue: Double, _: RandomGenerator) => math.ceil(fpValue).toInt
+    final val AlwaysDown: PopulationSizeRounding = (fpValue: Double, _: RandomGenerator) => fpValue.toInt
+    final val Probabilistic: PopulationSizeRounding = (fpValue: Double, rng: RandomGenerator) =>
       val lower = math.floor(fpValue).toInt
       val upper = math.ceil(fpValue).toInt
       if (lower == upper || rng.nextDouble() < upper - fpValue) lower else upper
-    }
 
     implicit def u2alwaysUp(@unused dummy: 'U'): PopulationSizeRounding = AlwaysUp
     implicit def d2alwaysDown(@unused dummy: 'D'): PopulationSizeRounding = AlwaysDown
     implicit def p2probabilistic(@unused dummy: 'P'): PopulationSizeRounding = Probabilistic
-  }
 
-  trait MutationStrength {
+  trait MutationStrength:
     def apply(nChanges: Long, multipliedLambda: Double): IntegerDistribution
-  }
 
-  object MutationStrength {
+  object MutationStrength:
     final val Standard: MutationStrength = (n, l) => BinomialDistribution.standard(n, l / n)
-    final val Resampling: MutationStrength = (n, l) => if (l < probEps) 1 else BinomialDistribution.resampling(n, l / n)
+    final val Resampling: MutationStrength = (n, l) => if l < probEps then 1 else BinomialDistribution.resampling(n, l / n)
     final val Shift: MutationStrength = (n, l) => BinomialDistribution.shift(n, l / n)
 
     implicit def s2standard(@unused dummy: 'S'): MutationStrength = Standard
     implicit def r2resampling(@unused dummy: 'R'): MutationStrength = Resampling
     implicit def h2shift(@unused dummy: 'H'): MutationStrength = Shift
-  }
 
-  trait CrossoverStrength {
+  trait CrossoverStrength:
     def apply(lambda: Double, mutantDistance: Int, quotient: Double): IntegerDistribution
-  }
 
-  object CrossoverStrength {
+  object CrossoverStrength:
     import math.max
 
-    private def standardize(p: Double): Double = if (p >= 1 - probEps) 1 else p
+    private def standardize(p: Double): Double = if p >= 1 - probEps then 1 else p
 
     final val StandardL:   CrossoverStrength = (l, d, q) => standard(d, standardize(q / l))
     final val StandardD:   CrossoverStrength = (_, d, q) => standard(d, standardize(q / max(d, 1)))
@@ -138,10 +120,9 @@ object CompatibilityLayer {
     implicit def rd2resamplingD(@unused dummy: "RD"): CrossoverStrength = ResamplingD
     implicit def hl2shiftL(@unused dummy: "HL"): CrossoverStrength = ShiftL
     implicit def hd2shiftD(@unused dummy: "HD"): CrossoverStrength = ShiftD
-  }
 
   sealed trait GoodMutantStrategy
-  object GoodMutantStrategy {
+  object GoodMutantStrategy:
     case object Ignore extends GoodMutantStrategy
     case object SkipCrossover extends GoodMutantStrategy
     case object DoNotCountIdentical extends GoodMutantStrategy
@@ -151,59 +132,52 @@ object CompatibilityLayer {
     implicit def s2skip(@unused dummy: 'S'): SkipCrossover.type = SkipCrossover
     implicit def c2doNotCount(@unused dummy: 'C'): DoNotCountIdentical.type = DoNotCountIdentical
     implicit def m2doNotSample(@unused  dummy: 'M'): DoNotSampleIdentical.type = DoNotSampleIdentical
-  }
 
-  trait LambdaTuning {
-    def lambda(rng: Random): Double
+  trait LambdaTuning:
+    def lambda(rng: RandomGenerator): Double
     def notifyChildIsBetter(budgetSpent: Long): Unit
     def notifyChildIsEqual(budgetSpent: Long): Unit
     def notifyChildIsWorse(budgetSpent: Long): Unit
-  }
 
   //noinspection ScalaUnusedSymbol
-  def fixedLambda(value: Double)(size: Long): LambdaTuning = new LambdaTuning {
-    override def lambda(rng: Random): Double = value
-    override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
-    override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
-    override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
-  }
+  def fixedLambda(value: Double)(size: Long): LambdaTuning = new LambdaTuning:
+    override def lambda(rng: RandomGenerator): Double = value
+    override def notifyChildIsBetter(budgetSpent: Long): Unit = ()
+    override def notifyChildIsEqual(budgetSpent: Long): Unit = ()
+    override def notifyChildIsWorse(budgetSpent: Long): Unit = ()
 
-  def fixedLogLambda(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] val theLambda = 2 * math.log(size + 1.0)
-    override def lambda(rng: Random): Double = theLambda
-    override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
-    override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
-    override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
-  }
+  def fixedLogLambda(size: Long): LambdaTuning = new LambdaTuning:
+    private val theLambda = 2 * math.log(size + 1.0)
+    override def lambda(rng: RandomGenerator): Double = theLambda
+    override def notifyChildIsBetter(budgetSpent: Long): Unit = ()
+    override def notifyChildIsEqual(budgetSpent: Long): Unit = ()
+    override def notifyChildIsWorse(budgetSpent: Long): Unit = ()
 
-  def fixedLogTowerLambda(size: Long): LambdaTuning = new LambdaTuning {
+  def fixedLogTowerLambda(size: Long): LambdaTuning = new LambdaTuning:
     private val logN = math.log(size + 1.0)
     private val logLogN = math.log(logN + 1.0)
     private val theLambda = math.sqrt(logN * logLogN / math.log(logLogN + 1.0)) * 2
-    override def lambda(rng: Random): Double = theLambda
-    override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
-    override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
-    override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
-  }
+    override def lambda(rng: RandomGenerator): Double = theLambda
+    override def notifyChildIsBetter(budgetSpent: Long): Unit = ()
+    override def notifyChildIsEqual(budgetSpent: Long): Unit = ()
+    override def notifyChildIsWorse(budgetSpent: Long): Unit = ()
 
   def powerLawLambda(beta: Double)(size: Long): LambdaTuning = powerLawLambda(beta, n => n)(size)
-  def powerLawLambda(beta: Double, limit: Long => Long)(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] val dist = PowerLawDistribution(limit(size), beta)
-    override def lambda(rng: Random): Double = dist.sample(rng)
+  def powerLawLambda(beta: Double, limit: Long => Long)(size: Long): LambdaTuning = new LambdaTuning:
+    private val dist = PowerLawDistribution(limit(size), beta)
+    override def lambda(rng: RandomGenerator): Double = dist.sample(rng)
     override def notifyChildIsBetter(budgetSpent: Long): Unit = {}
     override def notifyChildIsEqual(budgetSpent: Long): Unit = {}
     override def notifyChildIsWorse(budgetSpent: Long): Unit = {}
-  }
 
-  def oneFifthLambda(onSuccess: Double, onFailure: Double, threshold: Long => Double)(size: Long): LambdaTuning = new LambdaTuning {
-    private[this] var value = 1.0
-    private[this] val maxValue = threshold(size)
+  def oneFifthLambda(onSuccess: Double, onFailure: Double, threshold: Long => Double)(size: Long): LambdaTuning = new LambdaTuning:
+    private var value = 1.0
+    private val maxValue = threshold(size)
 
-    override def lambda(rng: Random): Double = value
+    override def lambda(rng: RandomGenerator): Double = value
     override def notifyChildIsBetter(budgetSpent: Long): Unit = value = math.min(maxValue, math.max(1, value * onSuccess))
     override def notifyChildIsEqual(budgetSpent: Long): Unit = notifyChildIsWorse(budgetSpent)
     override def notifyChildIsWorse(budgetSpent: Long): Unit = value = math.min(maxValue, math.max(1, value * onFailure))
-  }
 
   def defaultOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, _.toDouble)(size)
   def logCappedOneFifthLambda(size: Long): LambdaTuning = oneFifthLambda(OneFifthOnSuccess, OneFifthOnFailure, n => 2 * math.log(n + 1.0))(size)
@@ -216,13 +190,10 @@ object CompatibilityLayer {
   final val OneFifthOnSuccess = 1 / 1.5
   final val OneFifthOnFailure = math.pow(1.5, 0.25)
 
-  private[this] class ResampleUntilLess(base: IntegerDistribution, threshold: Int) extends IntegerDistribution {
-    @tailrec
-    override final def sample(rng: java.util.Random): Int = {
+  private class ResampleUntilLess(base: IntegerDistribution, threshold: Int) extends IntegerDistribution:
+    @tailrec private def sampleImpl(rng: RandomGenerator): Int =
       val value = base.sample(rng)
-      if (value < threshold) value else sample(rng)
-    }
+      if value < threshold then value else sampleImpl(rng)
+    override def sample(rng: RandomGenerator): Int = sampleImpl(rng)
     override def minValue: Int = base.minValue
     override def maxValue: Int = math.min(base.maxValue, threshold - 1)
-  }
-}

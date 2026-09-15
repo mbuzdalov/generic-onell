@@ -1,13 +1,13 @@
 package ru.ifmo.onell.main
 
-import java.net.{DatagramPacket, DatagramSocket}
-
-import ru.ifmo.onell._
-import ru.ifmo.onell.algorithm.oll.CompatibilityLayer._
+import ru.ifmo.onell.*
+import ru.ifmo.onell.algorithm.oll.CompatibilityLayer.*
 import ru.ifmo.onell.problem.{LinearRandomDoubleWeights, OneMax, RandomPlanted3SAT}
-import ru.ifmo.onell.util.Specialization.{changeSpecialization => csp, fitnessSpecialization => fsp}
 
-object IRaceClient extends Main.Module {
+import java.net.{DatagramPacket, DatagramSocket}
+import scala.compiletime.uninitialized
+
+object IRaceClient extends Main.Module:
   override def name: String = "irace"
   override def shortDescription: String = "Runs computations for irace"
   override def longDescription: Seq[String] = Seq(
@@ -52,89 +52,73 @@ object IRaceClient extends Main.Module {
     "    --generator easy|hard: the clause generator to use",
   )
 
-  override def moduleMain(args: Array[String]): Unit = {
-    if (args.contains("--run-as-server")) {
+  override def moduleMain(args: Array[String]): Unit =
+    if args.contains("--run-as-server") then
       val ports = args.getOption("--run-as-server").split(',').map(_.toInt)
-      for (port <- ports) {
-        val thread = new Thread(() => runServer(port))
+      for port <- ports do
+        val thread = Thread(() => runServer(port))
         thread.setName(s"worker-$port")
         println(s"Starting thread ${thread.getName} to listen on port $port")
         thread.start()
-      }
-    } else {
-      println(runMany(args))
-    }
-  }
+    else println(runMany(args))
 
-  private def runServer(port: Int): Unit = {
-    val socket = new DatagramSocket(port)
-    val array = new Array[Byte](10240)
-    val packet = new DatagramPacket(array, array.length)
-    try {
-      receiveCommandsUntilTheEnd(socket, array, packet)
-    } finally {
-      socket.close()
-    }
-  }
+  private def runServer(port: Int): Unit =
+    val socket = DatagramSocket(port)
+    val array = Array.ofDim[Byte](10240)
+    val packet = DatagramPacket(array, array.length)
+    try receiveCommandsUntilTheEnd(socket, array, packet) finally socket.close()
 
   @scala.annotation.tailrec
-  private def receiveCommandsUntilTheEnd(socket: DatagramSocket, theArray: Array[Byte], packet: DatagramPacket): Unit = {
+  private def receiveCommandsUntilTheEnd(socket: DatagramSocket, theArray: Array[Byte], packet: DatagramPacket): Unit =
     packet.setData(theArray)
     socket.setSendBufferSize(10240)
     socket.setReceiveBufferSize(10240)
     socket.receive(packet)
-    val text = new String(packet.getData, packet.getOffset, packet.getLength)
+    val text = String(packet.getData, packet.getOffset, packet.getLength)
     val result = runMany(text.split(" "))
     val resultBytes = result.getBytes
     packet.setData(resultBytes)
     socket.send(packet)
     receiveCommandsUntilTheEnd(socket, theArray, packet)
-  }
 
-  private def runMany(args: Array[String]): String = try {
+  private def runMany(args: Array[String]): String = try
     val nRuns = args.getOption("--average-over").toInt
     var sum = 0.0
     var idx = 0
-    while (idx < nRuns && !sum.isInfinite) {
+    while idx < nRuns && !sum.isInfinite do
       sum += runOne(args)
       idx += 1
-    }
     (sum / nRuns).toString
-  } catch {
+  catch
     case e: Throwable => e.toString
-  }
 
-  private def runOne(command: Array[String]): Double = {
+  private def runOne(command: Array[String]): Double =
     val optimizer = parseOptimizer(command.getOption("--algorithm"), command)
     val maxEvaluations = command.getOption("--max-evaluations").toLong
-    val mode = command.getOption("--mode") match {
+    val mode = command.getOption("--mode") match
       case "evaluations" => ReportEvaluationsUntilOptimum
       case "fitness" => ReportBestFitnessUnderLimits
       case "minus-fitness" => ReportMinusFitnessUnderLimits
-    }
-    command.getOption("--problem") match {
+    command.getOption("--problem") match 
       case "OneMax" => runUntilOptimum(optimizer, maxEvaluations, mode,
-                                       new OneMax(command.getOption("--n").toInt))
+                                       OneMax(command.getOption("--n").toInt))
       case "Linear" => runUntilOptimum(optimizer, maxEvaluations, mode,
-                                       new LinearRandomDoubleWeights(command.getOption("--n").toInt,
+                                       LinearRandomDoubleWeights(command.getOption("--n").toInt,
                                                                      command.getOption("--max-weight").toDouble,
                                                                      command.getOption("--seed").toLong))
       case "MaxSat" => runUntilOptimum(optimizer, maxEvaluations, mode,
-                                       new RandomPlanted3SAT(command.getOption("--n").toInt,
-                                                             command.getOption("--clauses").toInt,
-                                                             command.getOption("--generator") match {
-                                                               case "easy" => RandomPlanted3SAT.EasyGenerator
-                                                               case "hard" => RandomPlanted3SAT.HardGenerator
-                                                             },
-                                                             command.getOption("--seed").toLong))
-      case _ => throw new IllegalArgumentException(s"Unknown problem name '${command(1)}'. Supported names: OneMax, Linear, MaxSat'")
-    }
-  }
+                                       RandomPlanted3SAT(command.getOption("--n").toInt,
+                                                         command.getOption("--clauses").toInt,
+                                                         command.getOption("--generator") match
+                                                           case "easy" => RandomPlanted3SAT.EasyGenerator
+                                                           case "hard" => RandomPlanted3SAT.HardGenerator,
+                                                         command.getOption("--seed").toLong))
+      case _ => throw IllegalArgumentException(s"Unknown problem name '${command(1)}'. Supported names: OneMax, Linear, MaxSat'")
 
   private case class ParameterAndJson[T](value: T, json: String)
 
-  private def parseLambdaTuning(args: Array[String]): ParameterAndJson[Long => LambdaTuning] = {
-    args.getOption("--lambda-tuning") match {
+  private def parseLambdaTuning(args: Array[String]): ParameterAndJson[Long => LambdaTuning] =
+    args.getOption("--lambda-tuning") match
       case "linear" => ParameterAndJson(oneFifthLambda(
         onSuccess = args.getOption("--tuning-success").toDouble,
         onFailure = args.getOption("--tuning-failure").toDouble,
@@ -148,53 +132,40 @@ object IRaceClient extends Main.Module {
       case "fixed" =>
         val value = args.getOption("--lambda").toInt
         ParameterAndJson(fixedLambda(value), s""""lambda":"λ=$value"""")
-    }
-  }
 
-  private def parseMutationStrength(args: Array[String]): ParameterAndJson[MutationStrength] = {
-    args.getOption("--mutation-strength-alg") match {
+  private def parseMutationStrength(args: Array[String]): ParameterAndJson[MutationStrength] =
+    args.getOption("--mutation-strength-alg") match
       case "standard"   => ParameterAndJson(MutationStrength.Standard, """"mutation":"standard"""")
       case "shift"      => ParameterAndJson(MutationStrength.Shift, """"mutation":"shift"""")
       case "resampling" => ParameterAndJson(MutationStrength.Resampling, """"mutation":"resampling"""")
-    }
-  }
 
-  private def parseCrossoverStrength(args: Array[String]): ParameterAndJson[CrossoverStrength] = {
-    args.getOption("--crossover-strength-alg") match {
-      case "standard" => args.getOption("--crossover-strength-base") match {
+  private def parseCrossoverStrength(args: Array[String]): ParameterAndJson[CrossoverStrength] =
+    args.getOption("--crossover-strength-alg") match
+      case "standard" => args.getOption("--crossover-strength-base") match
         case "lambda"   => ParameterAndJson(CrossoverStrength.StandardL, """"crossover":"standard on lambda"""")
         case "distance" => ParameterAndJson(CrossoverStrength.StandardD, """"crossover":"standard on distance"""")
-      }
-      case "shift" => args.getOption("--crossover-strength-base") match {
+      case "shift" => args.getOption("--crossover-strength-base") match
         case "lambda"   => ParameterAndJson(CrossoverStrength.ShiftL, """"crossover":"shift on lambda"""")
         case "distance" => ParameterAndJson(CrossoverStrength.ShiftD, """"crossover":"shift on distance"""")
-      }
-      case "resampling" => args.getOption("--crossover-strength-base") match {
+      case "resampling" => args.getOption("--crossover-strength-base") match
         case "lambda"   => ParameterAndJson(CrossoverStrength.ResamplingL, """"crossover":"resampling on lambda"""")
         case "distance" => ParameterAndJson(CrossoverStrength.ResamplingD, """"crossover":"resampling on distance"""")
-      }
-    }
-  }
 
-  private def parseGoodMutantStrategy(args: Array[String]): ParameterAndJson[GoodMutantStrategy] = {
-    args.getOption("--good-mutant-strategy") match {
+  private def parseGoodMutantStrategy(args: Array[String]): ParameterAndJson[GoodMutantStrategy] =
+    args.getOption("--good-mutant-strategy") match
       case "ignore" => ParameterAndJson(GoodMutantStrategy.Ignore, """"good mutant":"ignore"""")
       case "skip-crossover" => ParameterAndJson(GoodMutantStrategy.SkipCrossover, """"good mutant":"skip crossover"""")
       case "do-not-count" => ParameterAndJson(GoodMutantStrategy.DoNotCountIdentical, """"good mutant":"do not count identical"""")
       case "do-not-sample" => ParameterAndJson(GoodMutantStrategy.DoNotSampleIdentical, """"good mutant":"do not sample identical"""")
-    }
-  }
 
-  private def parseRounding(args: Array[String]): ParameterAndJson[PopulationSizeRounding] = {
-    args.getOption("--popsize-rounding") match {
+  private def parseRounding(args: Array[String]): ParameterAndJson[PopulationSizeRounding] =
+    args.getOption("--popsize-rounding") match
       case "round-up" => ParameterAndJson(PopulationSizeRounding.AlwaysUp, """"rounding":"round up"""")
       case "round-down" => ParameterAndJson(PopulationSizeRounding.AlwaysDown, """"rounding":"round down"""")
       case "probabilistic" => ParameterAndJson(PopulationSizeRounding.Probabilistic, """"rounding":"probabilistic"""")
-    }
-  }
 
-  def parseOptimizerJson(optimizerName: String, args: Array[String]): String = {
-    optimizerName match {
+  def parseOptimizerJson(optimizerName: String, args: Array[String]): String =
+    optimizerName match
       case "oll" =>
         s"""${
           parseLambdaTuning(args).json
@@ -207,12 +178,10 @@ object IRaceClient extends Main.Module {
         },${
           parseRounding(args).json
         }"""
-      case _ => throw new IllegalArgumentException(s"Unknown optimizer name '$optimizerName'. Supported names: oll")
-    }
-  }
+      case _ => throw IllegalArgumentException(s"Unknown optimizer name '$optimizerName'. Supported names: oll")
 
-  def parseOptimizer(optimizerName: String, args: Array[String]): Optimizer = {
-    optimizerName match {
+  def parseOptimizer(optimizerName: String, args: Array[String]): Optimizer =
+    optimizerName match
       case "oll" => createOnePlusLambdaLambdaGA(
         lambdaTuning = parseLambdaTuning(args).value,
         mutationStrength = parseMutationStrength(args).value,
@@ -225,52 +194,41 @@ object IRaceClient extends Main.Module {
         ),
         populationRounding = parseRounding(args).value
       )
-      case _ => throw new IllegalArgumentException(s"Unknown optimizer name '$optimizerName'. Supported names: oll")
-    }
-  }
+      case _ => throw IllegalArgumentException(s"Unknown optimizer name '$optimizerName'. Supported names: oll")
 
-  private def runUntilOptimum[I, @specialized(fsp) F, @specialized(csp) C]
+  private def runUntilOptimum[I, F: Numeric, C]
                              (optimizer: Optimizer, maxEvaluations: Long, reportMode: ReportMode, problem: Fitness[I, F, C])
-                             (implicit deltaOps: HasDeltaOperations[C], indOps: HasIndividualOperations[I], fitness2double: F => Double): Double = {
-    val logger = new SimpleTerminationLogger[F](maxEvaluations, (l, r) => problem.compare(l, r) < 0)
-    try {
+                             (using HasDeltaOperations[C], HasIndividualOperations[I]): Double =
+    import scala.math.Numeric.Implicits.given
+    val logger = SimpleTerminationLogger[F](maxEvaluations, (l, r) => problem.compare(l, r) < 0)
+    try
       val normalizedIterations = optimizer.optimize(problem, logger).toDouble / problem.problemSize
-      reportMode match {
+      reportMode match
         case ReportEvaluationsUntilOptimum => normalizedIterations
-        case ReportBestFitnessUnderLimits => logger.getBestFitness
-        case ReportMinusFitnessUnderLimits => -logger.getBestFitness
-      }
-    } catch {
-      case EvaluationExceededException => reportMode match {
+        case ReportBestFitnessUnderLimits => logger.getBestFitness.toDouble
+        case ReportMinusFitnessUnderLimits => -logger.getBestFitness.toDouble
+    catch
+      case EvaluationExceededException => reportMode match
         case ReportEvaluationsUntilOptimum => Double.PositiveInfinity
-        case ReportBestFitnessUnderLimits => logger.getBestFitness
-        case ReportMinusFitnessUnderLimits => -logger.getBestFitness
-      }
-    }
-  }
+        case ReportBestFitnessUnderLimits => logger.getBestFitness.toDouble
+        case ReportMinusFitnessUnderLimits => -logger.getBestFitness.toDouble
 
-  private implicit class Options(val args: Array[String]) extends AnyVal {
-    def getOption(option: String): String = {
+  extension (args: Array[String])
+    private def getOption(option: String): String =
       val index = args.indexOf(option)
-      if (index < 0) throw new IllegalArgumentException(s"No option '$option' is given")
-      if (index + 1 == args.length) throw new IllegalArgumentException(s"Option '$option' should have an argument")
+      if index < 0 then throw IllegalArgumentException(s"No option '$option' is given")
+      if index + 1 == args.length then throw IllegalArgumentException(s"Option '$option' should have an argument")
       args(index + 1)
-    }
-  }
 
-  private class SimpleTerminationLogger[@specialized(fsp) F](maxEvaluations: Long, isLess: (F, F) => Boolean) extends IterationLogger[F] {
-    private var bestFitness: F = _
+  private class SimpleTerminationLogger[F](maxEvaluations: Long, isLess: (F, F) => Boolean) extends IterationLogger[F]:
+    private var bestFitness: F = uninitialized
     private var bestFitnessInitialized: Boolean = false
-    override def logIteration(evaluations: Long, fitness: F): Unit = {
-      if (!bestFitnessInitialized || isLess(fitness, bestFitness)) {
+    override def logIteration(evaluations: Long, fitness: F): Unit =
+      if !bestFitnessInitialized || isLess(fitness, bestFitness) then
         bestFitness = fitness
         bestFitnessInitialized = true
-      }
-      if (evaluations > maxEvaluations)
-        throw EvaluationExceededException
-    }
+      if evaluations > maxEvaluations then throw EvaluationExceededException
     def getBestFitness: F = bestFitness
-  }
 
   private object EvaluationExceededException extends RuntimeException
 
@@ -278,4 +236,3 @@ object IRaceClient extends Main.Module {
   private case object ReportEvaluationsUntilOptimum extends ReportMode
   private case object ReportBestFitnessUnderLimits extends ReportMode
   private case object ReportMinusFitnessUnderLimits extends ReportMode
-}

@@ -1,11 +1,7 @@
 package ru.ifmo.onell
 
-import ru.ifmo.onell.util.Specialization.fitnessSpecialization
-
-trait IterationLogger[@specialized(fitnessSpecialization) F] {
+trait IterationLogger[F]:
   def logIteration(evaluations: Long, fitness: F): Unit
-}
 
-object IterationLogger {
-  def dummyLogger[@specialized(fitnessSpecialization) F]: IterationLogger[F] = (_: Long, _: F) => {}
-}
+object IterationLogger:
+  def dummyLogger[F]: IterationLogger[F] = (_: Long, _: F) => {}

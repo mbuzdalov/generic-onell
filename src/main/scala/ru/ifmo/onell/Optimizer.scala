@@ -1,12 +1,9 @@
 package ru.ifmo.onell
 
-import scala.{specialized => sp}
-import ru.ifmo.onell.util.Specialization.{fitnessSpecialization => fsp, changeSpecialization => csp}
-
 /**
   * A common trait for optimizers.
   */
-trait Optimizer {
+trait Optimizer:
   /**
     * Runs optimization for a given problem.
     *
@@ -19,7 +16,5 @@ trait Optimizer {
     * @tparam C the type of change index of an individual.
     * @return the number of evaluations until an optimum is found.
     */
-  def optimize[I, @sp(fsp) F, @sp(csp) C](fitness: Fitness[I, F, C],
-                                          iterationLogger: IterationLogger[F] = IterationLogger.dummyLogger[F])
-                                         (implicit deltaOps: HasDeltaOperations[C], indOps: HasIndividualOperations[I]): Long
-}
+  def optimize[I, F, C](fitness: Fitness[I, F, C], iterationLogger: IterationLogger[F] = IterationLogger.dummyLogger[F])
+                       (using deltaOps: HasDeltaOperations[C], indOps: HasIndividualOperations[I]): Long
